@@ -1,4 +1,4 @@
-import type { ThumbSize, ThumbResult, ResolvedFolder } from '../gallery/types';
+import type { ThumbSize, ThumbResult, ResolvedFolder, ImageDimensions } from '../gallery/types';
 
 /** A file as seen by a storage backend. */
 export interface StoredFile {
@@ -21,4 +21,6 @@ export interface StorageProvider {
 	getThumbnail(fileId: string, size: ThumbSize): Promise<ThumbResult>;
 	/** A short-lived direct URL to download the original file. */
 	getOriginalUrl(fileId: string): Promise<string>;
+	/** Original pixel dimensions of an image, or null if unavailable. */
+	getImageDimensions(fileId: string): Promise<ImageDimensions | null>;
 }

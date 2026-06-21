@@ -4,7 +4,7 @@ import {
 	DROPBOX_REFRESH_TOKEN,
 	DROPBOX_ACCESS_TOKEN
 } from '$app/env/private';
-import type { ThumbSize, ThumbResult, ResolvedFolder } from '../gallery/types';
+import type { ThumbSize, ThumbResult, ResolvedFolder, ImageDimensions } from '../gallery/types';
 import type { StorageProvider, StoredFile } from './types';
 
 const RPC = 'https://api.dropboxapi.com/2';
@@ -46,6 +46,13 @@ interface SharedLinkMetadata {
 	'.tag': 'file' | 'folder';
 	name: string;
 	path_lower?: string;
+}
+
+interface FileMetadataWithMedia {
+	media_info?: {
+		'.tag': 'pending' | 'metadata';
+		metadata?: { '.tag': 'photo' | 'video'; dimensions?: { width: number; height: number } };
+	};
 }
 
 /** In-memory access token, refreshed from the long-lived refresh token as needed. */
@@ -130,5 +137,14 @@ export class DropboxStorageProvider implements StorageProvider {
 	async getOriginalUrl(fileId: string): Promise<string> {
 		const data = await rpc<{ link: string }>('files/get_temporary_link', { path: fileId });
 		return data.link;
+	}
+
+	async getImageDimensions(fileId: string): Promise<ImageDimensions | null> {
+		const data = await rpc<FileMetadataWithMedia>('files/get_metadata', {
+			path: fileId,
+			include_media_info: true
+		});
+		const dims = data.media_info?.metadata?.dimensions;
+		return dims ? { width: dims.width, height: dims.height } : null;
 	}
 }

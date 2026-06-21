@@ -19,11 +19,19 @@ export interface ResolvedFolder {
 	name: string;
 }
 
+export interface ImageDimensions {
+	width: number;
+	height: number;
+}
+
 export interface GalleryImage {
 	id: string;
 	name: string;
 	/** Opaque content version, used purely for cache-busting thumbnail URLs. */
 	version: string;
+	/** Original pixel dimensions, when known — used to reserve space and avoid layout shift. */
+	width?: number;
+	height?: number;
 }
 
 export interface Gallery {

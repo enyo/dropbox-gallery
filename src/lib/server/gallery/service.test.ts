@@ -6,12 +6,13 @@ import type { StorageProvider, StoredFile } from '../storage/types';
 
 const ref: GalleryRef = { id: '/test/festival', shareUrl: 'https://www.dropbox.com/scl/fo/x?rlkey=y&dl=0', title: 'Festival' };
 
-function fakeStorage(files: StoredFile[]): StorageProvider {
+function fakeStorage(files: StoredFile[], dims: Record<string, { width: number; height: number }> = {}): StorageProvider {
 	return {
 		resolveFolder: vi.fn(),
 		listFiles: vi.fn().mockResolvedValue(files),
 		getThumbnail: vi.fn().mockResolvedValue({ body: new Uint8Array([1]), contentType: 'image/jpeg' }),
-		getOriginalUrl: vi.fn().mockResolvedValue('https://dl/original')
+		getOriginalUrl: vi.fn().mockResolvedValue('https://dl/original'),
+		getImageDimensions: vi.fn(async (id: string) => dims[id] ?? null)
 	};
 }
 
@@ -28,12 +29,34 @@ describe('StorageBackedGalleryService', () => {
 		expect(gallery.images.map((i) => i.name)).toEqual(['IMG_2.jpg', 'IMG_10.jpg']);
 	});
 
+	it('includes original dimensions for layout-shift prevention', async () => {
+		const storage = fakeStorage([{ id: 'id:1', name: 'a.jpg', version: 'v' }], {
+			'id:1': { width: 2227, height: 1531 }
+		});
+		const gallery = await new StorageBackedGalleryService(storage).loadGallery(ref);
+		expect(gallery.images[0]).toMatchObject({ width: 2227, height: 1531 });
+	});
+
+	it('leaves dimensions undefined when metadata is unavailable', async () => {
+		const storage = fakeStorage([{ id: 'id:1', name: 'a.jpg', version: 'v' }]);
+		const gallery = await new StorageBackedGalleryService(storage).loadGallery(ref);
+		expect(gallery.images[0].width).toBeUndefined();
+		expect(gallery.images[0].height).toBeUndefined();
+	});
+
 	it('caches the listing across calls (one underlying list)', async () => {
 		const storage = fakeStorage([{ id: 'id:1', name: 'a.jpg', version: 'v' }]);
 		const service = new StorageBackedGalleryService(storage);
 		await service.loadGallery(ref);
 		await service.getThumbnail(ref, 'id:1', 'grid');
 		expect(storage.listFiles).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not fetch dimensions for thumbnail requests', async () => {
+		const storage = fakeStorage([{ id: 'id:1', name: 'a.jpg', version: 'v' }]);
+		const service = new StorageBackedGalleryService(storage);
+		await service.getThumbnail(ref, 'id:1', 'grid');
+		expect(storage.getImageDimensions).not.toHaveBeenCalled();
 	});
 
 	it('rejects thumbnails for images not in the gallery', async () => {

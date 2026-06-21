@@ -4,37 +4,30 @@
 
 	let { data }: PageProps = $props();
 
+	type Img = { id: string; version: string; width?: number; height?: number };
 	const enc = (id: string) => encodeURIComponent(id);
-	const gridUrl = (img: { id: string; version: string }) => `/g/${data.token}/thumb/${enc(img.id)}?v=${img.version}`;
-	const fullUrl = (img: { id: string; version: string }) => `/g/${data.token}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
-	const originalUrl = (img: { id: string }) => `/g/${data.token}/original/${enc(img.id)}`;
+	const gridUrl = (img: Img) => `/g/${data.token}/thumb/${enc(img.id)}?v=${img.version}`;
+	const fullUrl = (img: Img) => `/g/${data.token}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
+	const originalUrl = (img: Img) => `/g/${data.token}/original/${enc(img.id)}`;
 
-	// PhotoSwipe data source; dimensions are filled in as thumbnails load.
-	type Item = { src: string; msrc: string; width: number; height: number; origUrl: string };
-	const items: Item[] = $derived(
-		data.images.map((img) => ({
-			src: fullUrl(img),
-			msrc: gridUrl(img),
-			width: 1600,
-			height: 1067,
-			origUrl: originalUrl(img)
-		}))
-	);
-
-	/** Fit an aspect ratio into the 2048×1536 thumbnail bounds. */
+	/** Fit an aspect ratio into the 2048×1536 thumbnail bounds (the lightbox image size). */
 	function fitFull(aspect: number): [number, number] {
 		const maxW = 2048;
 		const maxH = 1536;
 		return aspect >= maxW / maxH ? [maxW, Math.round(maxW / aspect)] : [Math.round(maxH * aspect), maxH];
 	}
 
-	function onThumbLoad(i: number, event: Event) {
-		const el = event.currentTarget as HTMLImageElement;
-		if (!el.naturalWidth || !el.naturalHeight) return;
-		const [w, h] = fitFull(el.naturalWidth / el.naturalHeight);
-		items[i].width = w;
-		items[i].height = h;
-	}
+	// PhotoSwipe data source. Dimensions come from the server (EXIF), so they're known
+	// up front — no waiting on image load. Falls back to 3:2 when EXIF is missing.
+	const DEFAULT_ASPECT = 3 / 2;
+	type Item = { src: string; msrc: string; width: number; height: number; origUrl: string };
+	const items: Item[] = $derived(
+		data.images.map((img) => {
+			const aspect = img.width && img.height ? img.width / img.height : DEFAULT_ASPECT;
+			const [width, height] = fitFull(aspect);
+			return { src: fullUrl(img), msrc: gridUrl(img), width, height, origUrl: originalUrl(img) };
+		})
+	);
 
 	let lightbox: { loadAndOpen: (i: number) => void } | null = $state(null);
 
@@ -87,8 +80,14 @@
 {:else}
 	<div class="grid">
 		{#each data.images as img, i (img.id)}
-			<button class="tile" type="button" onclick={() => lightbox?.loadAndOpen(i)} aria-label={`Open ${img.name}`}>
-				<img src={gridUrl(img)} alt={img.name} loading="lazy" onload={(e) => onThumbLoad(i, e)} />
+			<button
+				class="tile"
+				type="button"
+				onclick={() => lightbox?.loadAndOpen(i)}
+				aria-label={`Open ${img.name}`}
+				style={img.width && img.height ? `aspect-ratio: ${img.width} / ${img.height}` : ''}
+			>
+				<img src={gridUrl(img)} alt={img.name} loading="lazy" />
 			</button>
 		{/each}
 	</div>

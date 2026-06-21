@@ -10,4 +10,5 @@ Galleries are stateless (see [0003](0003-stateless-signed-gallery-links.md)), so
 
 - Under steady traffic the app makes near-zero Dropbox calls, sidestepping rate limits without persistence.
 - Freshness is bounded by `s-maxage` (≈1h): a newly added photo appears after the gallery page revalidates, not instantly.
-- **v1 builds galleries from `list_folder` alone** (filename sort, no per-file `get_metadata`). Per-file metadata — enabling capture-time sort, exact dimensions for zero-CLS masonry, and GPS/map — is a deliberate future enhancement; the edge cache already makes its per-image call cost acceptable when it's switched on.
+- Galleries are built from `list_folder` plus a per-image `get_metadata` call (concurrency-limited) to obtain original dimensions, so the masonry grid can reserve space and avoid layout shift. `list_folder` does not return dimensions even by path, so the per-file calls are required. The edge cache absorbs their cost — they run only on a cache miss / revalidation, not per visitor. Membership checks for the thumbnail/original endpoints use the cheaper listing only, so they never trigger the metadata fan-out.
+- Sort is still by filename. Capture-time sort and GPS/map remain future enhancements built on the same `get_metadata` response.
