@@ -23,9 +23,10 @@ links, edge caching).
    *Scoped access*, **Full Dropbox** (not "App folder"). Under **Permissions** enable:
    `account_info.read`, `files.metadata.read`, `files.content.read`, `sharing.read`,
    `sharing.write`. Copy the **App key** and **App secret**.
-2. Copy `.env.example` to `.env` and fill in `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET`,
+2. Create a `.env` file and fill in `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET`,
    an `ADMIN_PASSWORD`, and random `GALLERY_SIGNING_SECRET` / `SESSION_SECRET`
-   (`openssl rand -hex 32`).
+   (`openssl rand -hex 32`). Every variable is declared and documented in
+   [`src/env.ts`](./src/env.ts).
 3. **Capture a refresh token** (one time): `npm run auth` — open the printed URL,
    click Allow, paste the code back. It writes `DROPBOX_REFRESH_TOKEN` to `.env`.
 4. Sanity-check the connection: `npm run dropbox:check`.
