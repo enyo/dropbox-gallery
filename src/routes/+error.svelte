@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
 
-	const headline = $derived(page.status === 410 ? 'This gallery link has expired' : page.status === 404 ? 'Gallery not found' : 'Something went wrong');
+	const headline = $derived(
+		page.status === 410
+			? 'This gallery link has expired'
+			: page.status === 404
+				? 'Gallery not found'
+				: 'Something went wrong'
+	);
 </script>
 
 <div class="wrap">

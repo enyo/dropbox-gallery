@@ -18,7 +18,11 @@ export type DecodeResult =
 	| { status: 'invalid' };
 
 /** Encode a signed Gallery Link token. `expiresAt` is epoch ms, or null for never. */
-export function encodeGalleryToken(ref: GalleryRef, expiresAt: number | null, secret: string): string {
+export function encodeGalleryToken(
+	ref: GalleryRef,
+	expiresAt: number | null,
+	secret: string
+): string {
 	const payload: TokenPayload = { i: ref.id, s: ref.shareUrl, t: ref.title, e: expiresAt };
 	return signPayload(payload, secret);
 }

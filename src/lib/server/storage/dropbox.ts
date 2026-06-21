@@ -62,7 +62,9 @@ async function getAccessToken(): Promise<string> {
 	if (!DROPBOX_REFRESH_TOKEN) {
 		// Fallback for local testing before a refresh token is captured.
 		if (DROPBOX_ACCESS_TOKEN) return DROPBOX_ACCESS_TOKEN;
-		throw new Error('Dropbox not configured: set DROPBOX_REFRESH_TOKEN (or DROPBOX_ACCESS_TOKEN for local testing).');
+		throw new Error(
+			'Dropbox not configured: set DROPBOX_REFRESH_TOKEN (or DROPBOX_ACCESS_TOKEN for local testing).'
+		);
 	}
 	if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
 
@@ -79,7 +81,10 @@ async function getAccessToken(): Promise<string> {
 	if (!res.ok) throw new DropboxApiError('oauth2/token', res.status, await res.text());
 	const data = (await res.json()) as { access_token: string; expires_in: number };
 	// Refresh 5 minutes before actual expiry.
-	cachedToken = { value: data.access_token, expiresAt: Date.now() + (data.expires_in - 300) * 1000 };
+	cachedToken = {
+		value: data.access_token,
+		expiresAt: Date.now() + (data.expires_in - 300) * 1000
+	};
 	return cachedToken.value;
 }
 
@@ -96,10 +101,14 @@ async function rpc<T>(endpoint: string, body: unknown): Promise<T> {
 
 export class DropboxStorageProvider implements StorageProvider {
 	async resolveFolder(shareUrl: string): Promise<ResolvedFolder> {
-		const meta = await rpc<SharedLinkMetadata>('sharing/get_shared_link_metadata', { url: shareUrl });
+		const meta = await rpc<SharedLinkMetadata>('sharing/get_shared_link_metadata', {
+			url: shareUrl
+		});
 		if (meta['.tag'] !== 'folder') throw new Error('That link points to a file, not a folder.');
 		if (!meta.path_lower) {
-			throw new Error('Could not resolve the folder path. Make sure the Dropbox app has Full Dropbox access.');
+			throw new Error(
+				'Could not resolve the folder path. Make sure the Dropbox app has Full Dropbox access.'
+			);
 		}
 		return { id: meta.path_lower, shareUrl, name: meta.name };
 	}

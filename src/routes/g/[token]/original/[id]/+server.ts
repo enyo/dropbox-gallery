@@ -12,7 +12,10 @@ export const GET: RequestHandler = async ({ params }) => {
 	try {
 		const link = await getGalleryService().getOriginalUrl(decoded.ref, params.id);
 		// Redirect straight to Dropbox; never proxy original bytes (Vercel 4.5 MB limit).
-		return new Response(null, { status: 302, headers: { location: link, 'cache-control': 'no-store' } });
+		return new Response(null, {
+			status: 302,
+			headers: { location: link, 'cache-control': 'no-store' }
+		});
 	} catch (e) {
 		if (e instanceof ImageNotFoundError || (e instanceof DropboxApiError && e.isNotFound)) {
 			return new Response('Not found', { status: 404 });

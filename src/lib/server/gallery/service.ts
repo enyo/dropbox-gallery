@@ -1,4 +1,12 @@
-import type { GalleryService, GalleryRef, Gallery, GalleryImage, ResolvedFolder, ThumbSize, ThumbResult } from './types';
+import type {
+	GalleryService,
+	GalleryRef,
+	Gallery,
+	GalleryImage,
+	ResolvedFolder,
+	ThumbSize,
+	ThumbResult
+} from './types';
 import { ImageNotFoundError } from './types';
 import type { StorageProvider, StoredFile } from '../storage/types';
 import { DropboxStorageProvider } from '../storage/dropbox';

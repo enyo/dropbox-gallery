@@ -3,7 +3,16 @@ import { isThumbnailableImage, byNaturalName } from './images';
 
 describe('isThumbnailableImage', () => {
 	it('accepts supported image extensions (case-insensitive)', () => {
-		for (const name of ['a.jpg', 'b.JPEG', 'c.png', 'd.gif', 'e.webp', 'f.bmp', 'g.tiff', 'h.tif']) {
+		for (const name of [
+			'a.jpg',
+			'b.JPEG',
+			'c.png',
+			'd.gif',
+			'e.webp',
+			'f.bmp',
+			'g.tiff',
+			'h.tif'
+		]) {
 			expect(isThumbnailableImage(name)).toBe(true);
 		}
 	});
@@ -17,7 +26,9 @@ describe('isThumbnailableImage', () => {
 
 describe('byNaturalName', () => {
 	it('orders numerically, not lexicographically', () => {
-		const sorted = [{ name: 'IMG_10.jpg' }, { name: 'IMG_2.jpg' }, { name: 'IMG_1.jpg' }].sort(byNaturalName);
+		const sorted = [{ name: 'IMG_10.jpg' }, { name: 'IMG_2.jpg' }, { name: 'IMG_1.jpg' }].sort(
+			byNaturalName
+		);
 		expect(sorted.map((f) => f.name)).toEqual(['IMG_1.jpg', 'IMG_2.jpg', 'IMG_10.jpg']);
 	});
 });

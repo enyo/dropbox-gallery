@@ -4,13 +4,22 @@ import { ImageNotFoundError } from './types';
 import type { GalleryRef } from './types';
 import type { StorageProvider, StoredFile } from '../storage/types';
 
-const ref: GalleryRef = { id: '/test/festival', shareUrl: 'https://www.dropbox.com/scl/fo/x?rlkey=y&dl=0', title: 'Festival' };
+const ref: GalleryRef = {
+	id: '/test/festival',
+	shareUrl: 'https://www.dropbox.com/scl/fo/x?rlkey=y&dl=0',
+	title: 'Festival'
+};
 
-function fakeStorage(files: StoredFile[], dims: Record<string, { width: number; height: number }> = {}): StorageProvider {
+function fakeStorage(
+	files: StoredFile[],
+	dims: Record<string, { width: number; height: number }> = {}
+): StorageProvider {
 	return {
 		resolveFolder: vi.fn(),
 		listFiles: vi.fn().mockResolvedValue(files),
-		getThumbnail: vi.fn().mockResolvedValue({ body: new Uint8Array([1]), contentType: 'image/jpeg' }),
+		getThumbnail: vi
+			.fn()
+			.mockResolvedValue({ body: new Uint8Array([1]), contentType: 'image/jpeg' }),
 		getOriginalUrl: vi.fn().mockResolvedValue('https://dl/original'),
 		getImageDimensions: vi.fn(async (id: string) => dims[id] ?? null)
 	};
@@ -62,7 +71,9 @@ describe('StorageBackedGalleryService', () => {
 	it('rejects thumbnails for images not in the gallery', async () => {
 		const storage = fakeStorage([{ id: 'id:1', name: 'a.jpg', version: 'v' }]);
 		const service = new StorageBackedGalleryService(storage);
-		await expect(service.getThumbnail(ref, 'id:evil', 'grid')).rejects.toBeInstanceOf(ImageNotFoundError);
+		await expect(service.getThumbnail(ref, 'id:evil', 'grid')).rejects.toBeInstanceOf(
+			ImageNotFoundError
+		);
 		expect(storage.getThumbnail).not.toHaveBeenCalled();
 	});
 

@@ -70,4 +70,6 @@ if (!res.ok || !data.refresh_token) {
 }
 
 writeFileSync(ENV_PATH, setEnvVar(raw, 'DROPBOX_REFRESH_TOKEN', data.refresh_token));
-console.log('\n✅ Refresh token captured and written to .env. You can delete the access token line if present.');
+console.log(
+	'\n✅ Refresh token captured and written to .env. You can delete the access token line if present.'
+);

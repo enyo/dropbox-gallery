@@ -6,7 +6,9 @@
 
 	// `values` is only present on validation-failure results from the mint action.
 	const values = $derived(
-		form && 'values' in form ? (form.values as { link: string; title: string; expiry: string }) : null
+		form && 'values' in form
+			? (form.values as { link: string; title: string; expiry: string })
+			: null
 	);
 
 	let copied = $state(false);
@@ -31,16 +33,31 @@
 	{#if !data.isAdmin}
 		<form class="card" method="POST" action="?/login" use:enhance>
 			<label for="password">Admin password</label>
-			<input id="password" name="password" type="password" autocomplete="current-password" required />
+			<input
+				id="password"
+				name="password"
+				type="password"
+				autocomplete="current-password"
+				required
+			/>
 			{#if form?.error}<p class="error">{form.error}</p>{/if}
 			<button class="primary" type="submit">Sign in</button>
 		</form>
 	{:else}
 		<form class="card" method="POST" action="?/mint" use:enhance>
 			<label for="link">Dropbox folder link</label>
-			<input id="link" name="link" type="url" placeholder="https://www.dropbox.com/scl/fo/…" value={values?.link ?? ''} required />
+			<input
+				id="link"
+				name="link"
+				type="url"
+				placeholder="https://www.dropbox.com/scl/fo/…"
+				value={values?.link ?? ''}
+				required
+			/>
 
-			<label for="title">Title <span class="hint">(optional — defaults to the folder name)</span></label>
+			<label for="title"
+				>Title <span class="hint">(optional — defaults to the folder name)</span></label
+			>
 			<input id="title" name="title" type="text" value={values?.title ?? ''} />
 
 			<label for="expiry">Link expires</label>

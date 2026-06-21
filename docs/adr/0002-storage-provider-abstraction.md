@@ -4,7 +4,7 @@ File access is behind a `StorageProvider` interface (`resolveFolder`, `listImage
 
 ## Why this shape
 
-We investigated Proton Drive as a future backend. It is end-to-end encrypted, so the server can never render thumbnails on demand the way Dropbox does; a Proton adapter would have to download + decrypt + resize internally. Defining the interface around the *result* (an image of size N) rather than the *mechanism* (a server-rendered thumbnail) means the Dropbox adapter satisfies it cheaply via `get_thumbnail_v2`, while a future adapter can satisfy the same contract with its own resize step — the cost difference stays hidden inside the adapter.
+We investigated Proton Drive as a future backend. It is end-to-end encrypted, so the server can never render thumbnails on demand the way Dropbox does; a Proton adapter would have to download + decrypt + resize internally. Defining the interface around the _result_ (an image of size N) rather than the _mechanism_ (a server-rendered thumbnail) means the Dropbox adapter satisfies it cheaply via `get_thumbnail_v2`, while a future adapter can satisfy the same contract with its own resize step — the cost difference stays hidden inside the adapter.
 
 ## Consequences
 

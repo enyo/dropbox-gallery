@@ -3,7 +3,11 @@ import { encodeGalleryToken, decodeGalleryToken } from './token';
 import type { GalleryRef } from './types';
 
 const SECRET = 'gallery-secret';
-const ref: GalleryRef = { id: '/test/festival', shareUrl: 'https://db.com/scl/fo/x', title: 'Festival' };
+const ref: GalleryRef = {
+	id: '/test/festival',
+	shareUrl: 'https://db.com/scl/fo/x',
+	title: 'Festival'
+};
 
 describe('gallery token', () => {
 	it('round-trips a folder reference', () => {

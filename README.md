@@ -20,37 +20,37 @@ links, edge caching).
 ## Setup
 
 1. **Create a Dropbox app** at https://www.dropbox.com/developers/apps —
-   *Scoped access*, **Full Dropbox** (not "App folder"). Under **Permissions** enable:
+   _Scoped access_, **Full Dropbox** (not "App folder"). Under **Permissions** enable:
    `account_info.read`, `files.metadata.read`, `files.content.read`, `sharing.read`,
    `sharing.write`. Copy the **App key** and **App secret**.
 2. Create a `.env` file and fill in `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET`,
    an `ADMIN_PASSWORD`, and random `GALLERY_SIGNING_SECRET` / `SESSION_SECRET`
    (`openssl rand -hex 32`). Every variable is declared and documented in
    [`src/env.ts`](./src/env.ts).
-3. **Capture a refresh token** (one time): `npm run auth` — open the printed URL,
+3. **Capture a refresh token** (one time): `pnpm auth` — open the printed URL,
    click Allow, paste the code back. It writes `DROPBOX_REFRESH_TOKEN` to `.env`.
-4. Sanity-check the connection: `npm run dropbox:check`.
+4. Sanity-check the connection: `pnpm dropbox:check`.
 
 ## Develop
 
 ```sh
-npm install
-npm run dev      # http://localhost:5173  (admin at /admin)
-npm run check    # type-check
-npm run test     # unit tests
+pnpm install
+pnpm dev      # http://localhost:5173  (admin at /admin)
+pnpm check    # type-check
+pnpm test     # unit tests
 ```
 
 ## Deploy (Vercel)
 
 Set these environment variables in the Vercel project, then deploy:
 
-| Variable | Notes |
-| --- | --- |
-| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | from the Dropbox App Console |
-| `DROPBOX_REFRESH_TOKEN` | from `npm run auth` |
-| `ADMIN_PASSWORD` | gate for `/admin` (use a strong value) |
-| `GALLERY_SIGNING_SECRET` | signs Gallery Links — rotating it invalidates all links |
-| `SESSION_SECRET` | signs the admin session cookie |
+| Variable                                 | Notes                                                   |
+| ---------------------------------------- | ------------------------------------------------------- |
+| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | from the Dropbox App Console                            |
+| `DROPBOX_REFRESH_TOKEN`                  | from `pnpm auth`                                        |
+| `ADMIN_PASSWORD`                         | gate for `/admin` (use a strong value)                  |
+| `GALLERY_SIGNING_SECRET`                 | signs Gallery Links — rotating it invalidates all links |
+| `SESSION_SECRET`                         | signs the admin session cookie                          |
 
 `DROPBOX_ACCESS_TOKEN` is optional (a short-lived token for local testing before a
 refresh token exists); leave it unset in production.

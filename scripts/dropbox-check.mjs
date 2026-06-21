@@ -4,7 +4,11 @@ import { readFileSync } from 'node:fs';
 
 const raw = readFileSync(new URL('../.env', import.meta.url), 'utf8');
 const env = Object.fromEntries(
-	raw.split('\n').map((l) => l.match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean).map((m) => [m[1], m[2]])
+	raw
+		.split('\n')
+		.map((l) => l.match(/^([A-Z0-9_]+)=(.*)$/))
+		.filter(Boolean)
+		.map((m) => [m[1], m[2]])
 );
 
 const tokenRes = await fetch('https://api.dropboxapi.com/oauth2/token', {

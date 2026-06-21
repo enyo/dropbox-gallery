@@ -26,6 +26,8 @@ export const variables = defineEnvVars({
 		description: 'Optional short-lived token for local testing before a refresh token exists.'
 	},
 	ADMIN_PASSWORD: { description: 'Password that gates the /admin page.' },
-	GALLERY_SIGNING_SECRET: { description: 'HMAC secret for Gallery Link tokens; rotating it invalidates all links.' },
+	GALLERY_SIGNING_SECRET: {
+		description: 'HMAC secret for Gallery Link tokens; rotating it invalidates all links.'
+	},
 	SESSION_SECRET: { description: 'HMAC secret for the admin session cookie.' }
 });

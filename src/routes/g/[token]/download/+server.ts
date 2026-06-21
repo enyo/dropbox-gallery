@@ -9,5 +9,8 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	// Dropbox zips the folder server-side when the share link carries ?dl=1.
 	const link = getGalleryService().getDownloadAllUrl(decoded.ref);
-	return new Response(null, { status: 302, headers: { location: link, 'cache-control': 'no-store' } });
+	return new Response(null, {
+		status: 302,
+		headers: { location: link, 'cache-control': 'no-store' }
+	});
 };

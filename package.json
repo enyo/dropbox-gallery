@@ -11,13 +11,20 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "vitest run",
+		"lint": "prettier --check .",
+		"format": "prettier --write .",
+		"auth": "node scripts/dropbox-auth.mjs",
+		"dropbox:check": "node scripts/dropbox-check.mjs"
 	},
 	"devDependencies": {
+		"@standard-schema/spec": "^1.1.0",
 		"@sveltejs/adapter-vercel": "^6.3.3",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/node": "^26.0.0",
+		"prettier": "^3.8.3",
+		"prettier-plugin-svelte": "^4.1.0",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",
