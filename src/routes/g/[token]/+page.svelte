@@ -64,11 +64,11 @@
 	let gridWidth = $state(0);
 
 	$effect(() => {
+		// Match exactly the syntaxes the style block implements, so detection and
+		// rendering never disagree.
 		const supportsNative =
 			typeof CSS !== 'undefined' &&
-			(CSS.supports('grid-template-rows', 'masonry') ||
-				CSS.supports('masonry-template-tracks', '1fr') ||
-				CSS.supports('display', 'masonry'));
+			(CSS.supports('grid-template-rows', 'masonry') || CSS.supports('display', 'masonry'));
 		polyfill = !supportsNative;
 	});
 
@@ -201,13 +201,19 @@
 		margin-top: 18vh;
 	}
 
+	/*
+	 * Native CSS masonry is the default layout, applied straight from CSS wherever
+	 * the browser supports it. The :not(.js) guard hands off to the JS polyfill
+	 * only when native support is absent.
+	 */
 	.grid {
 		max-width: var(--maxw);
 		margin: 0 auto;
 		padding: 0 24px 60px;
-		/* Fallback before hydration / without native masonry: CSS columns. */
-		column-width: 300px;
-		column-gap: var(--gap);
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		grid-template-rows: masonry;
+		gap: var(--gap);
 
 		&:has(.tile:hover) {
 			.tile:not(:hover) {
@@ -215,42 +221,20 @@
 			}
 		}
 	}
-
-	/* Native CSS masonry is the primary layout, applied from CSS wherever supported. */
-	/* The :not(.js) guard lets the JS polyfill take over only when native is absent. */
-	@supports (grid-template-rows: masonry) {
-		.grid:not(.js) {
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-			grid-template-rows: masonry;
-			gap: var(--gap);
-			column-width: auto;
-		}
-		.grid:not(.js) .tile {
-			width: auto;
-			margin: 0;
-		}
-	}
 	@supports (display: masonry) {
 		.grid:not(.js) {
 			display: masonry;
-			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-			gap: var(--gap);
-			column-width: auto;
-		}
-		.grid:not(.js) .tile {
-			width: auto;
-			margin: 0;
 		}
 	}
 
 	/* JS polyfill: tiles absolutely positioned in row-major shortest-column order. */
 	.grid.js {
+		display: block;
 		position: relative;
-		column-width: auto;
 	}
 	.grid.js .tile {
 		position: absolute;
+		width: auto;
 		margin: 0;
 	}
 
