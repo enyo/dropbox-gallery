@@ -1,4 +1,9 @@
-import * as config from '../config';
+import {
+	DROPBOX_APP_KEY,
+	DROPBOX_APP_SECRET,
+	DROPBOX_REFRESH_TOKEN,
+	DROPBOX_ACCESS_TOKEN
+} from '$app/env/private';
 import type { ThumbSize, ThumbResult, ResolvedFolder } from '../gallery/types';
 import type { StorageProvider, StoredFile } from './types';
 
@@ -47,11 +52,9 @@ interface SharedLinkMetadata {
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
-	const refreshToken = config.dropbox.refreshToken();
-	if (!refreshToken) {
+	if (!DROPBOX_REFRESH_TOKEN) {
 		// Fallback for local testing before a refresh token is captured.
-		const staticToken = config.dropbox.accessToken();
-		if (staticToken) return staticToken;
+		if (DROPBOX_ACCESS_TOKEN) return DROPBOX_ACCESS_TOKEN;
 		throw new Error('Dropbox not configured: set DROPBOX_REFRESH_TOKEN (or DROPBOX_ACCESS_TOKEN for local testing).');
 	}
 	if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
@@ -61,9 +64,9 @@ async function getAccessToken(): Promise<string> {
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams({
 			grant_type: 'refresh_token',
-			refresh_token: refreshToken,
-			client_id: config.dropbox.appKey(),
-			client_secret: config.dropbox.appSecret()
+			refresh_token: DROPBOX_REFRESH_TOKEN,
+			client_id: DROPBOX_APP_KEY,
+			client_secret: DROPBOX_APP_SECRET
 		})
 	});
 	if (!res.ok) throw new DropboxApiError('oauth2/token', res.status, await res.text());

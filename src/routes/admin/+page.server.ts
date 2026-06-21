@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { timingSafeEqual } from 'node:crypto';
 import { dev } from '$app/environment';
 import type { Actions, PageServerLoad } from './$types';
-import { adminPassword, gallerySigningSecret, sessionSecret } from '$lib/server/config';
+import { ADMIN_PASSWORD, GALLERY_SIGNING_SECRET, SESSION_SECRET } from '$app/env/private';
 import { createSessionValue, SESSION_COOKIE, SESSION_MAX_AGE } from '$lib/server/session';
 import { getGalleryService } from '$lib/server/gallery/service';
 import { encodeGalleryToken } from '$lib/server/gallery/token';
@@ -21,8 +21,8 @@ export const actions: Actions = {
 	login: async ({ request, cookies }) => {
 		const data = await request.formData();
 		const password = String(data.get('password') ?? '');
-		if (!safeEqual(password, adminPassword())) return fail(401, { error: 'Wrong password.' });
-		cookies.set(SESSION_COOKIE, createSessionValue(sessionSecret()), {
+		if (!safeEqual(password, ADMIN_PASSWORD)) return fail(401, { error: 'Wrong password.' });
+		cookies.set(SESSION_COOKIE, createSessionValue(SESSION_SECRET), {
 			path: '/',
 			httpOnly: true,
 			secure: !dev,
@@ -59,7 +59,7 @@ export const actions: Actions = {
 		const token = encodeGalleryToken(
 			{ id: folder.id, shareUrl: folder.shareUrl, title: title || folder.name },
 			expiresAt,
-			gallerySigningSecret()
+			GALLERY_SIGNING_SECRET
 		);
 
 		return { galleryUrl: `${url.origin}/g/${token}`, title: title || folder.name };

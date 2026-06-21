@@ -1,12 +1,12 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { gallerySigningSecret } from '$lib/server/config';
+import { GALLERY_SIGNING_SECRET } from '$app/env/private';
 import { decodeGalleryToken } from '$lib/server/gallery/token';
 import { getGalleryService } from '$lib/server/gallery/service';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
 export const load: PageServerLoad = async ({ params, setHeaders }) => {
-	const decoded = decodeGalleryToken(params.token, gallerySigningSecret());
+	const decoded = decodeGalleryToken(params.token, GALLERY_SIGNING_SECRET);
 	if (decoded.status === 'expired') throw error(410, 'This gallery link is no longer active.');
 	if (decoded.status === 'invalid') throw error(404, 'This gallery link is not valid.');
 

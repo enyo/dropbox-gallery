@@ -1,10 +1,10 @@
 import type { RequestHandler } from './$types';
-import { gallerySigningSecret } from '$lib/server/config';
+import { GALLERY_SIGNING_SECRET } from '$app/env/private';
 import { decodeGalleryToken } from '$lib/server/gallery/token';
 import { getGalleryService } from '$lib/server/gallery/service';
 
 export const GET: RequestHandler = async ({ params }) => {
-	const decoded = decodeGalleryToken(params.token, gallerySigningSecret());
+	const decoded = decodeGalleryToken(params.token, GALLERY_SIGNING_SECRET);
 	if (decoded.status !== 'ok') return new Response('Not found', { status: 404 });
 
 	// Dropbox zips the folder server-side when the share link carries ?dl=1.
