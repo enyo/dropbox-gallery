@@ -112,7 +112,13 @@
 					order: 8,
 					isButton: true,
 					tagName: 'a',
-					html: 'Download',
+					// Custom SVG so it sizes/aligns exactly like the built-in toolbar icons.
+					html: {
+						isCustomSVG: true,
+						inner:
+							'<path d="M20.5 14.3 17.1 17.7 17.1 10 14.9 10 14.9 17.7 11.5 14.3 10 15.8 16 21.8 22 15.8z M23 23H9v2h14z" id="pswp__icn-download" />',
+						outlineID: 'pswp__icn-download'
+					},
 					onInit: (el: HTMLAnchorElement) => {
 						el.setAttribute('download', '');
 						el.setAttribute('target', '_blank');
