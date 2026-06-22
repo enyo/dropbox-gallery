@@ -108,15 +108,15 @@
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
-		background: var(--surface);
-		border: 1px solid var(--border);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
 		border-radius: var(--radius);
 		padding: 22px;
 		margin-bottom: 18px;
 	}
 	label {
 		font-size: 0.9rem;
-		color: var(--text-dim);
+		color: var(--color-text-dim);
 		margin-top: 6px;
 	}
 	.hint {
@@ -125,21 +125,21 @@
 	}
 	input,
 	select {
-		background: var(--surface-2);
-		border: 1px solid var(--border);
-		color: var(--text);
+		background: var(--color-surface-2);
+		border: 1px solid var(--color-border);
+		color: var(--color-text);
 		border-radius: 8px;
 		padding: 0.6em 0.7em;
 		width: 100%;
 	}
 	input:focus,
 	select:focus {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--color-accent);
 		border-color: transparent;
 	}
 	button.primary {
-		background: var(--accent);
-		color: var(--accent-text);
+		background: var(--color-accent);
+		color: var(--color-accent-text);
 		border: none;
 		border-radius: 8px;
 		padding: 0.65em 1.1em;
@@ -149,12 +149,12 @@
 	button.link {
 		background: none;
 		border: none;
-		color: var(--text-dim);
+		color: var(--color-text-dim);
 		text-decoration: underline;
 		padding: 0;
 	}
 	.error {
-		color: #ff8080;
+		color: var(--color-danger);
 		margin: 4px 0 0;
 		font-size: 0.9rem;
 	}

@@ -187,17 +187,17 @@
 		display: flex;
 		align-items: center;
 		gap: 16px;
-		color: var(--text-dim);
+		color: var(--color-text-dim);
 		font-size: 0.95rem;
 	}
 	.download-all {
-		color: var(--accent);
+		color: var(--color-accent);
 		text-decoration: none;
 		font-weight: 600;
 	}
 	.empty {
 		text-align: center;
-		color: var(--text-dim);
+		color: var(--color-text-dim);
 		margin-top: 18vh;
 	}
 
@@ -244,7 +244,7 @@
 		width: 100%;
 		padding: 0;
 		border: none;
-		background: var(--surface);
+		background: var(--color-surface);
 		overflow: hidden;
 		display: block;
 		line-height: 0;

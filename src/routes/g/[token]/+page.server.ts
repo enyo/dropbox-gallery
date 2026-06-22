@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	}
 
 	// SSR + CDN edge cache: rebuilt at most ~hourly, not per visitor. See ADR 0004.
-	setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' });
+	setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400' });
 
 	return { token: params.token, title: gallery.title, images: gallery.images };
 };

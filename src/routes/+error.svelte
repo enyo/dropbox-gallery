@@ -27,7 +27,7 @@
 		margin: 0 0 0.4em;
 	}
 	p {
-		color: var(--text-dim);
+		color: var(--color-text-dim);
 		margin: 0;
 	}
 </style>

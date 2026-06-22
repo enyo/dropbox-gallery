@@ -16,13 +16,13 @@
 		margin: 0 0 0.4em;
 	}
 	p {
-		color: var(--text-dim);
+		color: var(--color-text-dim);
 		margin: 0 0 1.8em;
 	}
 	.btn {
 		display: inline-block;
-		background: var(--accent);
-		color: var(--accent-text);
+		background: var(--color-accent);
+		color: var(--color-accent-text);
 		text-decoration: none;
 		padding: 0.7em 1.4em;
 		border-radius: var(--radius);
