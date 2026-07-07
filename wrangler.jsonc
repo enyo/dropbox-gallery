@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "dropbox-gallery",
+	"name": "main",
 	// Bump when adopting newer Workers runtime behaviour; keep in sync with `wrangler`.
 	"compatibility_date": "2026-07-01",
 	// nodejs_compat gives us `node:crypto` (HMAC signing) and `Buffer`, which the app uses.
@@ -13,7 +13,13 @@
 		"directory": ".svelte-kit/cloudflare"
 	},
 	"observability": {
-		"enabled": true
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		},
+		"traces": {
+			"enabled": false
+		}
 	},
 	"d1_databases": [
 		{
