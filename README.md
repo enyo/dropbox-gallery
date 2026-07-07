@@ -91,4 +91,4 @@ pnpm db:migrate         # apply to the remote D1 (production; needs `wrangler lo
 | `DB` (binding)                           | Cloudflare D1 database, configured in `wrangler.jsonc` |
 
 `DROPBOX_ACCESS_TOKEN` is optional (a short-lived token for local testing before a
-refresh token exists) – leave it unset in production.
+refresh token exists); leave it unset in production.
