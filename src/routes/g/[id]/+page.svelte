@@ -12,9 +12,9 @@
 		height?: number;
 	};
 	const enc = (id: string) => encodeURIComponent(id);
-	const gridUrl = (img: Img) => `/g/${data.token}/thumb/${enc(img.id)}?v=${img.version}`;
-	const fullUrl = (img: Img) => `/g/${data.token}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
-	const originalUrl = (img: Img) => `/g/${data.token}/original/${enc(img.id)}`;
+	const gridUrl = (img: Img) => `/g/${data.id}/thumb/${enc(img.id)}?v=${img.version}`;
+	const fullUrl = (img: Img) => `/g/${data.id}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
+	const originalUrl = (img: Img) => `/g/${data.id}/original/${enc(img.id)}`;
 
 	const DEFAULT_ASPECT = 3 / 2;
 	const TARGET_COLUMN = 300; // px, matches the native-masonry minmax below
@@ -145,7 +145,7 @@
 	<div class="meta">
 		<span>{data.images.length} photo{data.images.length === 1 ? '' : 's'}</span>
 		{#if data.images.length > 0}
-			<a class="download-all" href={`/g/${data.token}/download`}>Download all</a>
+			<a class="download-all" href={`/g/${data.id}/download`}>Download all</a>
 		{/if}
 	</div>
 </header>

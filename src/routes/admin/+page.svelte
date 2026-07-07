@@ -11,12 +11,29 @@
 			: null
 	);
 
-	let copied = $state(false);
+	let copiedUrl = $state<string | null>(null);
 
 	async function copy(url: string) {
 		await navigator.clipboard.writeText(url);
-		copied = true;
-		setTimeout(() => (copied = false), 1500);
+		copiedUrl = url;
+		setTimeout(() => (copiedUrl = null), 1500);
+	}
+
+	const fmtDate = (ms: number) =>
+		new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+	type GalleryRow = {
+		id: string;
+		title: string;
+		url: string;
+		createdAt: number;
+		expiresAt: number | null;
+		revokedAt: number | null;
+	};
+	function galleryStatus(g: GalleryRow): 'live' | 'expired' | 'revoked' {
+		if (g.revokedAt !== null) return 'revoked';
+		if (g.expiresAt !== null && Date.now() > g.expiresAt) return 'expired';
+		return 'live';
 	}
 </script>
 
@@ -79,11 +96,49 @@
 				<div class="result-row">
 					<input type="text" readonly value={galleryUrl} />
 					<button class="primary" type="button" onclick={() => copy(galleryUrl)}>
-						{copied ? 'Copied' : 'Copy'}
+						{copiedUrl === galleryUrl ? 'Copied' : 'Copy'}
 					</button>
 				</div>
 				<a class="open" href={galleryUrl} target="_blank" rel="noreferrer">Open gallery ↗</a>
 			</div>
+		{/if}
+
+		{#if data.galleries.length}
+			<section class="galleries">
+				<h2>Your galleries</h2>
+				<ul>
+					{#each data.galleries as g (g.id)}
+						{@const st = galleryStatus(g)}
+						<li class:inactive={st !== 'live'}>
+							<div class="g-main">
+								<span class="g-title">{g.title}</span>
+								<span class="g-meta">
+									Created {fmtDate(g.createdAt)} ·
+									{#if g.expiresAt === null}never expires{:else}expires {fmtDate(g.expiresAt)}{/if}
+									{#if st !== 'live'}<span class="badge {st}">{st}</span>{/if}
+								</span>
+							</div>
+							<div class="g-actions">
+								<button class="link" type="button" onclick={() => copy(g.url)}>
+									{copiedUrl === g.url ? 'Copied' : 'Copy link'}
+								</button>
+								{#if st === 'live'}
+									<form
+										method="POST"
+										action="?/revoke"
+										use:enhance={({ cancel }) => {
+											if (!confirm(`Revoke “${g.title}”? Viewers will lose access.`)) cancel();
+										}}
+									>
+										<input type="hidden" name="id" value={g.id} />
+										<button class="danger" type="submit">Revoke</button>
+									</form>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</section>
 		{/if}
 	{/if}
 </div>
@@ -173,5 +228,77 @@
 	.open {
 		margin-top: 10px;
 		font-size: 0.9rem;
+	}
+	.galleries {
+		margin-top: 28px;
+	}
+	.galleries h2 {
+		font-size: 1.05rem;
+		margin: 0 0 10px;
+	}
+	.galleries ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.galleries li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		padding: 12px 16px;
+	}
+	.galleries li.inactive {
+		opacity: 0.6;
+	}
+	.g-main {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+	.g-title {
+		font-weight: 600;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.g-meta {
+		font-size: 0.82rem;
+		color: var(--color-text-dim);
+	}
+	.badge {
+		display: inline-block;
+		margin-left: 4px;
+		padding: 0 6px;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		border: 1px solid var(--color-border);
+	}
+	.badge.revoked {
+		color: var(--color-danger);
+		border-color: var(--color-danger);
+	}
+	.g-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		white-space: nowrap;
+	}
+	button.danger {
+		background: none;
+		border: 1px solid var(--color-danger);
+		color: var(--color-danger);
+		border-radius: 8px;
+		padding: 0.35em 0.8em;
+		font-size: 0.85rem;
 	}
 </style>

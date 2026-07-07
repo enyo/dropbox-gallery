@@ -2,12 +2,23 @@ import { fail, redirect } from '@sveltejs/kit';
 import { timingSafeEqual } from 'node:crypto';
 import { dev } from '$app/environment';
 import type { Actions, PageServerLoad } from './$types';
-import { ADMIN_PASSWORD, GALLERY_SIGNING_SECRET, SESSION_SECRET } from '$app/env/private';
+import { ADMIN_PASSWORD, SESSION_SECRET } from '$app/env/private';
 import { createSessionValue, SESSION_COOKIE, SESSION_MAX_AGE } from '$lib/server/session';
 import { getGalleryService } from '$lib/server/gallery/service';
-import { encodeGalleryToken } from '$lib/server/gallery/token';
+import { getGalleryStore } from '$lib/server/gallery/store';
 
-export const load: PageServerLoad = async ({ locals }) => ({ isAdmin: locals.isAdmin });
+export const load: PageServerLoad = async ({ locals, url, platform }) => {
+	if (!locals.isAdmin) return { isAdmin: false, galleries: [] };
+	const galleries = (await getGalleryStore(platform).list()).map((g) => ({
+		id: g.id,
+		title: g.title,
+		url: `${url.origin}/g/${g.id}`,
+		createdAt: g.createdAt,
+		expiresAt: g.expiresAt,
+		revokedAt: g.revokedAt
+	}));
+	return { isAdmin: true, galleries };
+};
 
 const EXPIRY_DAYS: Record<string, number | null> = { '30': 30, '90': 90, '365': 365, never: null };
 
@@ -37,7 +48,7 @@ export const actions: Actions = {
 		throw redirect(303, '/admin');
 	},
 
-	mint: async ({ request, locals, url }) => {
+	mint: async ({ request, locals, url, platform }) => {
 		if (!locals.isAdmin) return fail(401, { error: 'Not authenticated.' });
 		const data = await request.formData();
 		const link = String(data.get('link') ?? '').trim();
@@ -56,12 +67,24 @@ export const actions: Actions = {
 
 		const days = expiry in EXPIRY_DAYS ? EXPIRY_DAYS[expiry] : 90;
 		const expiresAt = days === null ? null : Date.now() + days * 24 * 60 * 60 * 1000;
-		const token = encodeGalleryToken(
-			{ id: folder.id, shareUrl: folder.shareUrl, title: title || folder.name },
-			expiresAt,
-			GALLERY_SIGNING_SECRET
-		);
+		const galleryTitle = title || folder.name;
+		const id = await getGalleryStore(platform).create({
+			folderId: folder.id,
+			shareUrl: folder.shareUrl,
+			title: galleryTitle,
+			expiresAt
+		});
 
-		return { galleryUrl: `${url.origin}/g/${token}`, title: title || folder.name };
+		return { galleryUrl: `${url.origin}/g/${id}`, title: galleryTitle };
+	},
+
+	revoke: async ({ request, locals, platform }) => {
+		if (!locals.isAdmin) return fail(401, { error: 'Not authenticated.' });
+		const data = await request.formData();
+		const id = String(data.get('id') ?? '');
+		if (!id) return fail(400, { error: 'Missing gallery id.' });
+		await getGalleryStore(platform).revoke(id);
+		// `use:enhance` invalidates and re-runs `load`, refreshing the listing.
+		return { revoked: id };
 	}
 };

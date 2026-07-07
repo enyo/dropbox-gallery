@@ -23,7 +23,7 @@ The displayed collection of images from one **Source Folder**.
 The Dropbox folder, in the single connected account, whose images a **Gallery** displays.
 
 **Gallery Link**:
-A signed, unguessable capability URL that grants a **Viewer** access to exactly one **Gallery**. Possession is access — there is no viewer login or viewer password. "Signed" means tamper-proof, not that a login is required. Carries an optional expiry, set by the **Admin** at mint time (default 90 days, may be null for never). Cannot be individually revoked while storage is stateless — expiry is the only containment mechanism.
+An unguessable capability URL (`/g/<id>`) that grants a **Viewer** access to exactly one **Gallery**. Possession is access — there is no viewer login or viewer password. The `<id>` is a random, opaque key into a persisted gallery record; it carries no readable data. Carries an optional expiry, set by the **Admin** at mint time (default 90 days, may be null for never), and can be **individually revoked** by the **Admin** at any time. Expiry and revocation are the containment mechanisms (both take effect once the edge cache lapses, not instantly).
 _Avoid_: share link (collides with Dropbox's own "shared link" feature)
 
 ## Relationships
@@ -38,7 +38,7 @@ _Avoid_: share link (collides with Dropbox's own "shared link" feature)
 > **Dev:** "When the **Admin** mints a **Gallery Link**, does the **Viewer** ever type a password?"
 > **Operator:** "No. The password is the **Admin Password** — it just stops anyone but me from minting links. Once a **Gallery Link** exists, whoever holds it is in."
 > **Dev:** "And if I want to cut off a link I shared?"
-> **Operator:** "I can't, individually — that's the price of having no database. I set an expiry when I mint it; if I need to nuke everything, I rotate the signing secret."
+> **Operator:** "I revoke it from the admin page — each gallery is a row in the database now. Viewers lose access once the edge cache lapses. I can still set an expiry at mint time as well."
 > **Dev:** "What does the **Gallery Link** point at?"
 > **Operator:** "Exactly one **Source Folder** in my Dropbox. The **Gallery** is just the images in that folder, rendered with a lightbox."
 

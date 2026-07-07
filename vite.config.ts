@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import adapter from '@sveltejs/adapter-vercel';
+import adapter from '@sveltejs/adapter-cloudflare';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
@@ -10,7 +10,12 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter(),
+			adapter: adapter({
+				// Emulate Cloudflare bindings (D1, etc.) during `vite dev` / `vite preview`,
+				// sourced from wrangler.jsonc and persisted under .wrangler/state — the same
+				// local SQLite that `wrangler d1 migrations apply --local` writes to.
+				platformProxy: { persist: true }
+			}),
 			experimental: {
 				// Declare env vars explicitly in src/env.ts; import typed values from $app/env/private.
 				explicitEnvironmentVariables: true
