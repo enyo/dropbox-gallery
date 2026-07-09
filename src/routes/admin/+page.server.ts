@@ -1,14 +1,15 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { timingSafeEqual } from 'node:crypto';
 import { dev } from '$app/env';
 import type { Actions, PageServerLoad } from './$types';
-import { ADMIN_PASSWORD, SESSION_SECRET } from '$app/env/private';
+import { SESSION_SECRET } from '$app/env/private';
 import { createSessionValue, SESSION_COOKIE, SESSION_MAX_AGE } from '$lib/server/session';
 import { getGalleryService } from '$lib/server/gallery/service';
 import { getGalleryStore } from '$lib/server/gallery/store';
+import { getUserStore } from '$lib/server/auth/users';
+import { verifyPassword } from '$lib/server/password';
 
 export const load: PageServerLoad = async ({ locals, url, platform }) => {
-	if (!locals.isAdmin) return { isAdmin: false, galleries: [] };
+	if (!locals.isAdmin) return { isAdmin: false, username: null, galleries: [] };
 	const galleries = (await getGalleryStore(platform).list()).map((g) => ({
 		id: g.id,
 		title: g.title,
@@ -17,23 +18,31 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 		expiresAt: g.expiresAt,
 		revokedAt: g.revokedAt
 	}));
-	return { isAdmin: true, galleries };
+	return { isAdmin: true, username: locals.username ?? null, galleries };
 };
 
 const EXPIRY_DAYS: Record<string, number | null> = { '30': 30, '90': 90, '365': 365, never: null };
 
-function safeEqual(a: string, b: string): boolean {
-	const ab = Buffer.from(a);
-	const bb = Buffer.from(b);
-	return ab.length === bb.length && timingSafeEqual(ab, bb);
-}
+// A valid-shaped hash to verify against when the username is unknown, so login
+// timing does not reveal whether an account exists. It matches no real password.
+const DUMMY_HASH =
+	'pbkdf2$sha256$210000$NK0oYfeA8fUZQzjxmjDcsg$0c5ukxHnZNFc3TnN_ppj7JTQ43nvzxkVcfGeQS1H-8w';
 
 export const actions: Actions = {
-	login: async ({ request, cookies }) => {
+	login: async ({ request, cookies, platform }) => {
 		const data = await request.formData();
+		const username = String(data.get('username') ?? '').trim();
 		const password = String(data.get('password') ?? '');
-		if (!safeEqual(password, ADMIN_PASSWORD)) return fail(401, { error: 'Wrong password.' });
-		cookies.set(SESSION_COOKIE, createSessionValue(SESSION_SECRET), {
+
+		const user = username ? await getUserStore(platform).findByUsername(username) : null;
+		// Always run a verify (against a dummy hash when the user is missing) so a
+		// wrong username and a wrong password take the same amount of time.
+		const ok = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
+		if (!user || !ok) {
+			return fail(401, { error: 'Wrong username or password.', values: { username } });
+		}
+
+		cookies.set(SESSION_COOKIE, createSessionValue(user.username, SESSION_SECRET), {
 			path: '/',
 			httpOnly: true,
 			secure: !dev,

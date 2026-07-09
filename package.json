@@ -16,6 +16,7 @@
 		"format": "prettier --write .",
 		"auth": "node scripts/dropbox-auth.mjs",
 		"dropbox:check": "node scripts/dropbox-check.mjs",
+		"admin:create": "node scripts/create-admin.mjs",
 		"db:create": "wrangler d1 create dropbox-gallery",
 		"db:migrate:local": "wrangler d1 migrations apply dropbox-gallery --local",
 		"db:migrate": "wrangler d1 migrations apply dropbox-gallery --remote",

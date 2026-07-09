@@ -25,6 +25,5 @@ export const variables = defineEnvVars({
 		schema: optionalString,
 		description: 'Optional short-lived token for local testing before a refresh token exists.'
 	},
-	ADMIN_PASSWORD: { description: 'Password that gates the /admin page.' },
 	SESSION_SECRET: { description: 'HMAC secret for the admin session cookie.' }
 });

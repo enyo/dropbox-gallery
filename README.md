@@ -10,7 +10,7 @@ edge caching).
 
 ## How it works
 
-- **Admin** signs in with a password and pastes a Dropbox folder share link to mint
+- **Admin** signs in with a username + password (stored in D1, salted-hashed) and pastes a Dropbox folder share link to mint
   a **Gallery Link** — an unguessable capability URL (`/g/<id>`). The `<id>` is the
   primary key of a row in D1 that holds the folder reference, title, and expiry; the id
   itself carries no readable data.
@@ -27,9 +27,10 @@ edge caching).
    _Scoped access_, **Full Dropbox** (not "App folder"). Under **Permissions** enable:
    `account_info.read`, `files.metadata.read`, `files.content.read`, `sharing.read`,
    `sharing.write`. Copy the **App key** and **App secret**.
-2. Create a `.env` file and fill in `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET`,
-   an `ADMIN_PASSWORD`, and a random `SESSION_SECRET` (`openssl rand -hex 32`).
-   Every variable is declared and documented in [`src/env.ts`](./src/env.ts).
+2. Create a `.env` file and fill in `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` and a
+   random `SESSION_SECRET` (`openssl rand -hex 32`). Every variable is declared and
+   documented in [`src/env.ts`](./src/env.ts). (Admin credentials are _not_ env vars —
+   see below.)
 3. **Capture a refresh token** (one time): `pnpm auth` — open the printed URL,
    click Allow, paste the code back. It writes `DROPBOX_REFRESH_TOKEN` to `.env`.
 4. Sanity-check the connection: `pnpm dropbox:check`.
@@ -39,10 +40,16 @@ edge caching).
 ```sh
 pnpm install
 pnpm db:migrate:local   # create/upgrade the local D1 database (.wrangler/state)
+pnpm admin:create       # create an admin user (username + password) in the local D1
 pnpm dev                # http://localhost:5173  (admin at /admin)
 pnpm check              # type-check
 pnpm test               # unit tests
 ```
+
+Admin sign-in is username + password, stored in the D1 `users` table as a salted
+PBKDF2 hash (see [ADR-0006](./docs/adr/0006-admin-auth-in-d1.md)). Create or rotate a
+user with `pnpm admin:create` (add `--remote` to write to production). There is no public
+sign-up — credentials are only ever seeded out of band with that script.
 
 `pnpm dev` runs the app in the Cloudflare Workers runtime via the adapter's
 `platformProxy`, so the `DB` binding is a real (local) D1 database — the same SQLite that
@@ -72,23 +79,25 @@ pnpm db:migrate         # apply to the remote D1 (production; needs `wrangler lo
    pnpm db:create        # wrangler d1 create dropbox-gallery
    ```
 3. **Apply migrations** to the remote database: `pnpm db:migrate`.
-4. **Set secrets** (they are read at runtime from the Worker's environment, not baked in):
+4. **Create the admin user** in production: `pnpm admin:create --remote`.
+5. **Set secrets** (they are read at runtime from the Worker's environment, not baked in):
    ```sh
    pnpm exec wrangler secret put DROPBOX_APP_KEY
    pnpm exec wrangler secret put DROPBOX_APP_SECRET
    pnpm exec wrangler secret put DROPBOX_REFRESH_TOKEN
-   pnpm exec wrangler secret put ADMIN_PASSWORD
    pnpm exec wrangler secret put SESSION_SECRET
    ```
-5. **Deploy:** `pnpm deploy` (builds with `@sveltejs/adapter-cloudflare`, then `wrangler deploy`).
+6. **Deploy:** `pnpm deploy` (builds with `@sveltejs/adapter-cloudflare`, then `wrangler deploy`).
 
 | Variable                                 | Notes                                                  |
 | ---------------------------------------- | ------------------------------------------------------ |
 | `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | from the Dropbox App Console                           |
 | `DROPBOX_REFRESH_TOKEN`                  | from `pnpm auth`                                       |
-| `ADMIN_PASSWORD`                         | gate for `/admin` (use a strong value)                 |
 | `SESSION_SECRET`                         | signs the admin session cookie                         |
 | `DB` (binding)                           | Cloudflare D1 database, configured in `wrangler.jsonc` |
+
+Admin credentials are not env vars — they live in the D1 `users` table; seed them with
+`pnpm admin:create --remote`.
 
 `DROPBOX_ACCESS_TOKEN` is optional (a short-lived token for local testing before a
 refresh token exists); leave it unset in production.

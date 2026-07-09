@@ -7,6 +7,7 @@
  */
 import type { D1Database } from '@cloudflare/workers-types';
 import type { GalleryRef } from './types';
+import { getDb } from '../db';
 
 /** A gallery as stored, in camelCase. Used by the admin listing. */
 export interface GalleryRecord {
@@ -123,17 +124,7 @@ export class GalleryStore {
 	}
 }
 
-/**
- * The gallery store for the current request. The D1 binding is provided by
- * Cloudflare at runtime (and emulated locally by adapter `platformProxy`), so it
- * is only available through `event.platform`, never as a module-level singleton.
- */
+/** The gallery store for the current request (see `getDb` for how the binding is resolved). */
 export function getGalleryStore(platform: App.Platform | undefined): GalleryStore {
-	const db = platform?.env?.DB;
-	if (!db) {
-		throw new Error(
-			'D1 binding "DB" is not available. Run `pnpm db:migrate:local` and start the app with `pnpm dev` (platformProxy), or configure the binding in wrangler.jsonc.'
-		);
-	}
-	return new GalleryStore(db);
+	return new GalleryStore(getDb(platform));
 }

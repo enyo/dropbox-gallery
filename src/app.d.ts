@@ -8,6 +8,8 @@ declare global {
 		interface Locals {
 			/** True when the request carries a valid admin session cookie. */
 			isAdmin: boolean;
+			/** The authenticated admin's username, when `isAdmin` is true. */
+			username?: string;
 		}
 		// interface PageData {}
 		// interface PageState {}

@@ -4,10 +4,17 @@
 
 	let { data, form }: PageProps = $props();
 
-	// `values` is only present on validation-failure results from the mint action.
+	// `values` echoes back a failed submission so the form can be repopulated.
+	// Two actions echo values (mint → link/title/expiry, login → username); the
+	// `'link' in`/`'username' in` guards pick the right one, then cast via unknown.
 	const values = $derived(
-		form && 'values' in form
-			? (form.values as { link: string; title: string; expiry: string })
+		form && 'values' in form && form.values && 'link' in form.values
+			? (form.values as unknown as { link: string; title: string; expiry: string })
+			: null
+	);
+	const loginValues = $derived(
+		form && 'values' in form && form.values && 'username' in form.values
+			? (form.values as unknown as { username: string })
 			: null
 	);
 
@@ -41,15 +48,27 @@
 	<header>
 		<h1>Gallery admin</h1>
 		{#if data.isAdmin}
-			<form method="POST" action="?/logout" use:enhance>
-				<button class="link" type="submit">Log out</button>
-			</form>
+			<div class="account">
+				{#if data.username}<span class="whoami">Signed in as {data.username}</span>{/if}
+				<form method="POST" action="?/logout" use:enhance>
+					<button class="link" type="submit">Log out</button>
+				</form>
+			</div>
 		{/if}
 	</header>
 
 	{#if !data.isAdmin}
 		<form class="card" method="POST" action="?/login" use:enhance>
-			<label for="password">Admin password</label>
+			<label for="username">Username</label>
+			<input
+				id="username"
+				name="username"
+				type="text"
+				autocomplete="username"
+				value={loginValues?.username ?? ''}
+				required
+			/>
+			<label for="password">Password</label>
 			<input
 				id="password"
 				name="password"
@@ -158,6 +177,15 @@
 	h1 {
 		font-size: 1.6rem;
 		margin: 0;
+	}
+	.account {
+		display: flex;
+		align-items: baseline;
+		gap: 12px;
+	}
+	.whoami {
+		font-size: 0.85rem;
+		color: var(--color-text-dim);
 	}
 	.card {
 		display: flex;
