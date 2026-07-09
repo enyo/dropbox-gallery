@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { timingSafeEqual } from 'node:crypto';
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import type { Actions, PageServerLoad } from './$types';
 import { ADMIN_PASSWORD, SESSION_SECRET } from '$app/env/private';
 import { createSessionValue, SESSION_COOKIE, SESSION_MAX_AGE } from '$lib/server/session';
