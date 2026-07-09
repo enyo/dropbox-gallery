@@ -130,7 +130,7 @@
 						{@const st = galleryStatus(g)}
 						<li class:inactive={st !== 'live'}>
 							<div class="g-main">
-								<span class="g-title">{g.title}</span>
+								<a class="g-title" href="/admin/g/{g.id}">{g.title}</a>
 								<span class="g-meta">
 									Created {fmtDate(g.createdAt)} ·
 									{#if g.expiresAt === null}never expires{:else}expires {fmtDate(g.expiresAt)}{/if}
@@ -292,10 +292,16 @@
 		min-width: 0;
 	}
 	.g-title {
+		display: block;
 		font-weight: 600;
+		color: var(--color-text);
+		text-decoration: none;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	.g-title:hover {
+		text-decoration: underline;
 	}
 	.g-meta {
 		font-size: 0.82rem;

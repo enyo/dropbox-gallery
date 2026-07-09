@@ -106,6 +106,19 @@ export class GalleryStore {
 		return resolveRow(row, now);
 	}
 
+	/**
+	 * Fetch a gallery record by id regardless of status. Unlike `resolve`, this
+	 * returns expired and revoked galleries too, so the admin can still inspect,
+	 * edit, or delete them. Returns null when no such row exists.
+	 */
+	async get(id: string): Promise<GalleryRecord | null> {
+		const row = await this.#db
+			.prepare(`SELECT * FROM galleries WHERE id = ?`)
+			.bind(id)
+			.first<GalleryRow>();
+		return row ? toRecord(row) : null;
+	}
+
 	/** All galleries, newest first — including expired/revoked ones, for the admin view. */
 	async list(): Promise<GalleryRecord[]> {
 		const { results } = await this.#db
@@ -120,6 +133,24 @@ export class GalleryStore {
 			.prepare(`UPDATE galleries SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL`)
 			.bind(now, id)
 			.run();
+		return meta.changes > 0;
+	}
+
+	/** Update a gallery's editable fields (title and expiry). Returns true if the row exists. */
+	async update(id: string, fields: { title: string; expiresAt: number | null }): Promise<boolean> {
+		const { meta } = await this.#db
+			.prepare(`UPDATE galleries SET title = ?, expires_at = ? WHERE id = ?`)
+			.bind(fields.title, fields.expiresAt, id)
+			.run();
+		return meta.changes > 0;
+	}
+
+	/**
+	 * Permanently delete a gallery row. The capability id becomes unresolvable
+	 * (a 404, not a 410 like revocation). Returns true if a row was removed.
+	 */
+	async delete(id: string): Promise<boolean> {
+		const { meta } = await this.#db.prepare(`DELETE FROM galleries WHERE id = ?`).bind(id).run();
 		return meta.changes > 0;
 	}
 }

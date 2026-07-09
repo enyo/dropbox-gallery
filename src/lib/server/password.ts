@@ -11,7 +11,7 @@
  */
 
 // OWASP-recommended floor for PBKDF2-HMAC-SHA256; tune upward over time.
-const ITERATIONS = 210_000;
+const ITERATIONS = 100_000;
 const KEY_BYTES = 32;
 const SALT_BYTES = 16;
 
