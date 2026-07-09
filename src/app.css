@@ -1,5 +1,5 @@
 :root {
-	color-scheme: light dark;
+	color-scheme: light;
 
 	/* Light theme (default) */
 	--color-bg: #ffffff;
@@ -20,7 +20,7 @@
 }
 
 /* Dark theme, following the OS preference */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
 	:root {
 		--color-bg: #0d0d0f;
 		--color-surface: #17171b;
@@ -32,7 +32,7 @@
 		--color-accent-text: #ffffff;
 		--color-danger: #ff8080;
 	}
-}
+} */
 
 * {
 	box-sizing: border-box;
