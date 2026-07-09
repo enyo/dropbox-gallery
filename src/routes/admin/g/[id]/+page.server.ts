@@ -1,10 +1,8 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getGalleryStore } from '$lib/server/gallery/store';
-import { getGalleryService } from '$lib/server/gallery/service';
 import type { GalleryRecord } from '$lib/server/gallery/store';
 import { getEventStore } from '$lib/server/gallery/events';
-import { DropboxApiError } from '$lib/server/storage/dropbox';
 
 type GalleryStatus = 'live' | 'expired' | 'revoked';
 
@@ -14,34 +12,14 @@ function statusOf(g: Pick<GalleryRecord, 'expiresAt' | 'revokedAt'>): GallerySta
 	return 'live';
 }
 
+// `load` returns only the gallery metadata — a single indexed D1 lookup — so the page
+// shell paints immediately. The photos (a live Dropbox listing) and the engagement
+// activity stream in via the `./data.remote` queries behind skeleton loaders.
 export const load: PageServerLoad = async ({ params, locals, platform, url }) => {
 	if (!locals.isAdmin) throw redirect(303, '/admin');
 
 	const record = await getGalleryStore(platform).get(params.id);
 	if (!record) throw error(404, 'This gallery does not exist.');
-
-	// Load the photos so we can list them with thumbnails. The gallery's admin
-	// controls must still work even if the source folder has gone away, so a
-	// failure here degrades to an empty list rather than erroring the page.
-	let photos: { id: string; name: string; version: string; width?: number; height?: number }[] = [];
-	let photosError = false;
-	try {
-		const gallery = await getGalleryService().loadGallery({
-			id: record.folderId,
-			shareUrl: record.shareUrl,
-			title: record.title
-		});
-		photos = gallery.images;
-	} catch (e) {
-		if (!(e instanceof DropboxApiError && e.isNotFound)) {
-			console.error('Failed to load gallery photos for admin', e);
-		}
-		photosError = true;
-	}
-
-	// Viewer engagement (opens, downloads). Keyed by filename, so it dangles for
-	// photos since renamed or deleted; the page cross-references the live listing.
-	const activity = await getEventStore(platform).summarize(record.id);
 
 	return {
 		username: locals.username ?? null,
@@ -53,10 +31,7 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
 			expiresAt: record.expiresAt,
 			revokedAt: record.revokedAt,
 			status: statusOf(record)
-		},
-		photos,
-		photosError,
-		activity
+		}
 	};
 };
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { getPhotos, getActivity } from './data.remote';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -30,24 +31,34 @@
 		setTimeout(() => (copied = false), 1500);
 	}
 
-	// Engagement counters are keyed by filename, so they attach to the photo list by
-	// name. A photo since renamed or deleted in Dropbox is no longer in the listing;
-	// its counters are surfaced as "removed" rows so nothing is silently dropped —
-	// unless the listing itself failed to load, in which case we can't tell.
-	const activity = $derived(data.activity);
-	const statsByName = $derived(new Map(activity.perImage.map((s) => [s.name, s])));
-	const totalEvents = $derived(
-		activity.totalZooms + activity.totalDownloads + activity.downloadAll
-	);
-	const currentNames = $derived(new Set(data.photos.map((p) => p.name)));
-	const removedStats = $derived(
-		data.photosError ? [] : activity.perImage.filter((s) => !currentNames.has(s.name))
-	);
+	// Photos (a live Dropbox listing — the slow part) and engagement activity (a D1
+	// aggregation) load via remote functions instead of the page `load`, so the shell
+	// paints immediately and each streams into its section below behind a skeleton.
+	// Re-derived per gallery id so navigating between galleries refetches.
+	const photosQuery = $derived(getPhotos(data.gallery.id));
+	const activityQuery = $derived(getActivity(data.gallery.id));
 </script>
 
 <svelte:head>
 	<title>{data.gallery.title} · admin</title>
 </svelte:head>
+
+{#snippet metricRow(zooms: number, downloads: number)}
+	<span class="metrics">
+		<span class="metric" class:zero={!zooms} title="Views">
+			<svg viewBox="0 0 16 16" aria-hidden="true"
+				><path
+					d="M8 3C4.5 3 1.7 5.1 1 8c.7 2.9 3.5 5 7 5s6.3-2.1 7-5c-.7-2.9-3.5-5-7-5Zm0 8.5A3.5 3.5 0 1 1 8 4.5a3.5 3.5 0 0 1 0 7Zm0-1.7a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"
+				/></svg
+			>{zooms}
+		</span>
+		<span class="metric" class:zero={!downloads} title="Downloads">
+			<svg viewBox="0 0 16 16" aria-hidden="true"
+				><path d="M8 1v7.4l2.3-2.3 1.1 1L8 11.6 3.6 7.1l1.1-1L7 8.4V1h1ZM3 13h10v1.5H3V13Z" /></svg
+			>{downloads}
+		</span>
+	</span>
+{/snippet}
 
 <div class="wrap">
 	<header>
@@ -71,7 +82,9 @@
 		{#if data.gallery.expiresAt === null}never expires{:else}expires {fmtDate(
 				data.gallery.expiresAt
 			)}{/if}
-		· {data.photos.length} photo{data.photos.length === 1 ? '' : 's'}
+		{#await photosQuery}{:then { photos }} · {photos.length} photo{photos.length === 1
+				? ''
+				: 's'}{:catch}{/await}
 	</p>
 	<div class="link-row">
 		<input type="text" readonly value={data.gallery.url} />
@@ -102,83 +115,86 @@
 
 	<section class="card">
 		<h2>Activity</h2>
-		{#if totalEvents === 0}
-			<p class="muted">No views or downloads recorded yet.</p>
-		{:else}
-			<div class="stats">
-				<div class="stat">
-					<strong>{activity.totalZooms}</strong><span
-						>image {activity.totalZooms === 1 ? 'view' : 'views'}</span
-					>
-				</div>
-				<div class="stat">
-					<strong>{activity.totalDownloads}</strong><span
-						>image {activity.totalDownloads === 1 ? 'download' : 'downloads'}</span
-					>
-				</div>
-				<div class="stat">
-					<strong>{activity.downloadAll}</strong><span>“download all”</span>
+		{#await activityQuery}
+			<div class="skeleton">
+				<div class="stats wrapper">
+					<div class="stat-sk"></div>
+					<div class="stat-sk"></div>
+					<div class="stat-sk"></div>
 				</div>
 			</div>
-		{/if}
+		{:then activity}
+			{#if activity.totalZooms + activity.totalDownloads + activity.downloadAll === 0}
+				<p class="muted">No views or downloads recorded yet.</p>
+			{:else}
+				<div class="stats">
+					<div class="stat">
+						<strong>{activity.totalZooms}</strong><span
+							>image {activity.totalZooms === 1 ? 'view' : 'views'}</span
+						>
+					</div>
+					<div class="stat">
+						<strong>{activity.totalDownloads}</strong><span
+							>image {activity.totalDownloads === 1 ? 'download' : 'downloads'}</span
+						>
+					</div>
+					<div class="stat">
+						<strong>{activity.downloadAll}</strong><span>“download all”</span>
+					</div>
+				</div>
+				<p class="muted hint">Per-photo views and downloads are shown in the photo list below.</p>
+			{/if}
+		{:catch}
+			<p class="muted">Couldn’t load activity.</p>
+		{/await}
 	</section>
 
 	<section class="photos">
 		<h2>Photos</h2>
-		{#if data.photosError}
-			<p class="muted">Couldn’t load photos — the source folder may be unavailable.</p>
-		{:else if data.photos.length === 0 && removedStats.length === 0}
-			<p class="muted">This gallery has no photos.</p>
-		{:else}
-			<ul>
-				{#each data.photos as photo (photo.id)}
-					{@const s = statsByName.get(photo.name)}
-					<li>
-						<img class="thumb" src={thumbUrl(photo)} alt={photo.name} loading="lazy" />
-						<span class="name">{photo.name}</span>
-						<span class="metrics">
-							<span class="metric" class:zero={!s?.zooms} title="Views">
-								<svg viewBox="0 0 16 16" aria-hidden="true"
-									><path
-										d="M8 3C4.5 3 1.7 5.1 1 8c.7 2.9 3.5 5 7 5s6.3-2.1 7-5c-.7-2.9-3.5-5-7-5Zm0 8.5A3.5 3.5 0 1 1 8 4.5a3.5 3.5 0 0 1 0 7Zm0-1.7a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"
-									/></svg
-								>{s?.zooms ?? 0}
-							</span>
-							<span class="metric" class:zero={!s?.downloads} title="Downloads">
-								<svg viewBox="0 0 16 16" aria-hidden="true"
-									><path
-										d="M8 1v7.4l2.3-2.3 1.1 1L8 11.6 3.6 7.1l1.1-1L7 8.4V1h1ZM3 13h10v1.5H3V13Z"
-									/></svg
-								>{s?.downloads ?? 0}
-							</span>
-						</span>
-					</li>
-				{/each}
-				{#each removedStats as s (s.name)}
-					<li class="removed-row">
-						<span class="thumb placeholder" aria-hidden="true"></span>
-						<span class="name">{s.name}</span>
-						<span class="gone" title="No longer in the Dropbox folder">removed</span>
-						<span class="metrics">
-							<span class="metric" class:zero={!s.zooms} title="Views">
-								<svg viewBox="0 0 16 16" aria-hidden="true"
-									><path
-										d="M8 3C4.5 3 1.7 5.1 1 8c.7 2.9 3.5 5 7 5s6.3-2.1 7-5c-.7-2.9-3.5-5-7-5Zm0 8.5A3.5 3.5 0 1 1 8 4.5a3.5 3.5 0 0 1 0 7Zm0-1.7a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"
-									/></svg
-								>{s.zooms}
-							</span>
-							<span class="metric" class:zero={!s.downloads} title="Downloads">
-								<svg viewBox="0 0 16 16" aria-hidden="true"
-									><path
-										d="M8 1v7.4l2.3-2.3 1.1 1L8 11.6 3.6 7.1l1.1-1L7 8.4V1h1ZM3 13h10v1.5H3V13Z"
-									/></svg
-								>{s.downloads}
-							</span>
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{/if}
+		{#await Promise.all([photosQuery, activityQuery])}
+			<div class="skeleton">
+				<ul class="wrapper">
+					{#each Array(5) as _, i (i)}
+						<li class="wrapper">
+							<div class="thumb-sk"></div>
+							<div class="name-sk"></div>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{:then [{ photos, photosError }, activity]}
+			{@const statsByName = new Map(activity.perImage.map((s) => [s.name, s]))}
+			{@const currentNames = new Set(photos.map((p) => p.name))}
+			{@const removedStats = photosError
+				? []
+				: activity.perImage.filter((s) => !currentNames.has(s.name))}
+			{#if photosError}
+				<p class="muted">Couldn’t load photos — the source folder may be unavailable.</p>
+			{:else if photos.length === 0 && removedStats.length === 0}
+				<p class="muted">This gallery has no photos.</p>
+			{:else}
+				<ul>
+					{#each photos as photo (photo.id)}
+						{@const s = statsByName.get(photo.name)}
+						<li>
+							<img class="thumb" src={thumbUrl(photo)} alt={photo.name} loading="lazy" />
+							<span class="name">{photo.name}</span>
+							{@render metricRow(s?.zooms ?? 0, s?.downloads ?? 0)}
+						</li>
+					{/each}
+					{#each removedStats as s (s.name)}
+						<li class="removed-row">
+							<span class="thumb placeholder" aria-hidden="true"></span>
+							<span class="name">{s.name}</span>
+							<span class="gone" title="No longer in the Dropbox folder">removed</span>
+							{@render metricRow(s.zooms, s.downloads)}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		{:catch}
+			<p class="muted">Couldn’t load photos — please try again.</p>
+		{/await}
 	</section>
 
 	<section class="card danger-zone">
@@ -456,6 +472,59 @@
 	/* Fade rows/metrics with no activity so the counts that matter stand out. */
 	.metric.zero {
 		opacity: 0.35;
+	}
+
+	/*
+	 * Skeleton loaders shown while the photos/activity remote functions resolve.
+	 * `.skeleton` is display:contents, so its `.wrapper` children keep the real
+	 * layout while every non-wrapper descendant becomes a shimmering placeholder.
+	 * Technique: https://www.matsimon.dev/blog/simple-skeleton-loaders
+	 */
+	.skeleton {
+		display: contents;
+		--_default-color: var(--color-border);
+		--_shimmer-color: var(--color-bg);
+	}
+	.skeleton :not(.wrapper) {
+		animation: skeleton-shimmer 2s ease-out infinite;
+		background: linear-gradient(
+			100deg,
+			var(--_default-color),
+			var(--_default-color) 50%,
+			var(--_shimmer-color) 60%,
+			var(--_default-color) 70%
+		);
+		background-size: 200% 100%;
+		background-attachment: fixed;
+	}
+	@keyframes skeleton-shimmer {
+		0% {
+			background-position-x: 200%;
+		}
+		100% {
+			background-position-x: 0%;
+		}
+	}
+	.stat-sk {
+		flex: 1 1 120px;
+		height: 63px;
+		border-radius: 8px;
+	}
+	.thumb-sk {
+		width: 48px;
+		height: 48px;
+		border-radius: 6px;
+		flex-shrink: 0;
+	}
+	.name-sk {
+		height: 12px;
+		width: min(45%, 240px);
+		border-radius: 4px;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.skeleton :not(.wrapper) {
+			animation: none;
+		}
 	}
 	.danger-zone {
 		margin-top: 2rem;
