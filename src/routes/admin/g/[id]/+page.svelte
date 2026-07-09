@@ -29,6 +29,20 @@
 		copied = true;
 		setTimeout(() => (copied = false), 1500);
 	}
+
+	// Engagement counters are keyed by filename, so they attach to the photo list by
+	// name. A photo since renamed or deleted in Dropbox is no longer in the listing;
+	// its counters are surfaced as "removed" rows so nothing is silently dropped —
+	// unless the listing itself failed to load, in which case we can't tell.
+	const activity = $derived(data.activity);
+	const statsByName = $derived(new Map(activity.perImage.map((s) => [s.name, s])));
+	const totalEvents = $derived(
+		activity.totalZooms + activity.totalDownloads + activity.downloadAll
+	);
+	const currentNames = $derived(new Set(data.photos.map((p) => p.name)));
+	const removedStats = $derived(
+		data.photosError ? [] : activity.perImage.filter((s) => !currentNames.has(s.name))
+	);
 </script>
 
 <svelte:head>
@@ -86,18 +100,81 @@
 		</form>
 	</section>
 
+	<section class="card">
+		<h2>Activity</h2>
+		{#if totalEvents === 0}
+			<p class="muted">No views or downloads recorded yet.</p>
+		{:else}
+			<div class="stats">
+				<div class="stat">
+					<strong>{activity.totalZooms}</strong><span
+						>image {activity.totalZooms === 1 ? 'view' : 'views'}</span
+					>
+				</div>
+				<div class="stat">
+					<strong>{activity.totalDownloads}</strong><span
+						>image {activity.totalDownloads === 1 ? 'download' : 'downloads'}</span
+					>
+				</div>
+				<div class="stat">
+					<strong>{activity.downloadAll}</strong><span>“download all”</span>
+				</div>
+			</div>
+		{/if}
+	</section>
+
 	<section class="photos">
 		<h2>Photos</h2>
 		{#if data.photosError}
 			<p class="muted">Couldn’t load photos — the source folder may be unavailable.</p>
-		{:else if data.photos.length === 0}
+		{:else if data.photos.length === 0 && removedStats.length === 0}
 			<p class="muted">This gallery has no photos.</p>
 		{:else}
 			<ul>
 				{#each data.photos as photo (photo.id)}
+					{@const s = statsByName.get(photo.name)}
 					<li>
 						<img class="thumb" src={thumbUrl(photo)} alt={photo.name} loading="lazy" />
 						<span class="name">{photo.name}</span>
+						<span class="metrics">
+							<span class="metric" class:zero={!s?.zooms} title="Views">
+								<svg viewBox="0 0 16 16" aria-hidden="true"
+									><path
+										d="M8 3C4.5 3 1.7 5.1 1 8c.7 2.9 3.5 5 7 5s6.3-2.1 7-5c-.7-2.9-3.5-5-7-5Zm0 8.5A3.5 3.5 0 1 1 8 4.5a3.5 3.5 0 0 1 0 7Zm0-1.7a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"
+									/></svg
+								>{s?.zooms ?? 0}
+							</span>
+							<span class="metric" class:zero={!s?.downloads} title="Downloads">
+								<svg viewBox="0 0 16 16" aria-hidden="true"
+									><path
+										d="M8 1v7.4l2.3-2.3 1.1 1L8 11.6 3.6 7.1l1.1-1L7 8.4V1h1ZM3 13h10v1.5H3V13Z"
+									/></svg
+								>{s?.downloads ?? 0}
+							</span>
+						</span>
+					</li>
+				{/each}
+				{#each removedStats as s (s.name)}
+					<li class="removed-row">
+						<span class="thumb placeholder" aria-hidden="true"></span>
+						<span class="name">{s.name}</span>
+						<span class="gone" title="No longer in the Dropbox folder">removed</span>
+						<span class="metrics">
+							<span class="metric" class:zero={!s.zooms} title="Views">
+								<svg viewBox="0 0 16 16" aria-hidden="true"
+									><path
+										d="M8 3C4.5 3 1.7 5.1 1 8c.7 2.9 3.5 5 7 5s6.3-2.1 7-5c-.7-2.9-3.5-5-7-5Zm0 8.5A3.5 3.5 0 1 1 8 4.5a3.5 3.5 0 0 1 0 7Zm0-1.7a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"
+									/></svg
+								>{s.zooms}
+							</span>
+							<span class="metric" class:zero={!s.downloads} title="Downloads">
+								<svg viewBox="0 0 16 16" aria-hidden="true"
+									><path
+										d="M8 1v7.4l2.3-2.3 1.1 1L8 11.6 3.6 7.1l1.1-1L7 8.4V1h1ZM3 13h10v1.5H3V13Z"
+									/></svg
+								>{s.downloads}
+							</span>
+						</span>
 					</li>
 				{/each}
 			</ul>
@@ -265,6 +342,43 @@
 		font-size: 0.9rem;
 		margin: 0 0 14px;
 	}
+	.stats {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.stat {
+		flex: 1 1 120px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		background: var(--color-surface-2);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 12px 14px;
+	}
+	.stat strong {
+		font-size: 1.5rem;
+		font-weight: 600;
+		line-height: 1;
+	}
+	.stat span {
+		color: var(--color-text-dim);
+		font-size: 0.8rem;
+	}
+	.hint {
+		margin: 14px 0 0;
+	}
+	.gone {
+		flex-shrink: 0;
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		color: var(--color-danger);
+		border: 1px solid var(--color-danger);
+		border-radius: 999px;
+		padding: 0 6px;
+	}
 	.badge {
 		display: inline-block;
 		padding: 1px 8px;
@@ -306,12 +420,45 @@
 		background: var(--color-surface-2);
 		flex-shrink: 0;
 	}
+	.thumb.placeholder {
+		background: transparent;
+		border: 1px dashed var(--color-border);
+	}
 	.name {
+		flex: 1;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	.removed-row .name {
+		color: var(--color-text-dim);
+	}
+	.metrics {
+		flex-shrink: 0;
+		display: flex;
+		gap: 14px;
+		color: var(--color-text-dim);
+		font-size: 0.85rem;
+	}
+	.metric {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-variant-numeric: tabular-nums;
+	}
+	.metric svg {
+		width: 14px;
+		height: 14px;
+		fill: currentColor;
+		opacity: 0.85;
+	}
+	/* Fade rows/metrics with no activity so the counts that matter stand out. */
+	.metric.zero {
+		opacity: 0.35;
+	}
 	.danger-zone {
+		margin-top: 2rem;
 		border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
 	}
 	button.danger {

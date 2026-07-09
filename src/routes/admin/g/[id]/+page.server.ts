@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { getGalleryStore } from '$lib/server/gallery/store';
 import { getGalleryService } from '$lib/server/gallery/service';
 import type { GalleryRecord } from '$lib/server/gallery/store';
+import { getEventStore } from '$lib/server/gallery/events';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
 type GalleryStatus = 'live' | 'expired' | 'revoked';
@@ -38,6 +39,10 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
 		photosError = true;
 	}
 
+	// Viewer engagement (opens, downloads). Keyed by filename, so it dangles for
+	// photos since renamed or deleted; the page cross-references the live listing.
+	const activity = await getEventStore(platform).summarize(record.id);
+
 	return {
 		username: locals.username ?? null,
 		gallery: {
@@ -50,7 +55,8 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
 			status: statusOf(record)
 		},
 		photos,
-		photosError
+		photosError,
+		activity
 	};
 };
 
@@ -85,6 +91,8 @@ export const actions: Actions = {
 	delete: async ({ params, locals, platform }) => {
 		if (!locals.isAdmin) return fail(401, { error: 'Not authenticated.' });
 		await getGalleryStore(platform).delete(params.id);
+		// The gallery id is gone for good, so its dangling counters are pure waste.
+		await getEventStore(platform).deleteForGallery(params.id);
 		throw redirect(303, '/admin');
 	}
 };

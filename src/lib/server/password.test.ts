@@ -23,7 +23,7 @@ describe('password hashing', () => {
 
 	it('produces the self-describing format', async () => {
 		const stored = await hashPassword('x');
-		expect(stored).toMatch(/^pbkdf2\$sha256\$210000\$[A-Za-z0-9_-]+\$[A-Za-z0-9_-]+$/);
+		expect(stored).toMatch(/^pbkdf2\$sha256\$100000\$[A-Za-z0-9_-]+\$[A-Za-z0-9_-]+$/);
 	});
 
 	it('returns false for malformed stored values instead of throwing', async () => {

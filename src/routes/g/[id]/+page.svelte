@@ -44,6 +44,7 @@
 		width: number;
 		height: number;
 		origUrl: string;
+		name: string;
 	};
 	const items: Item[] = $derived(
 		tiles.map(({ img, ar }) => {
@@ -53,10 +54,25 @@
 				msrc: gridUrl(img),
 				width,
 				height,
-				origUrl: originalUrl(img)
+				origUrl: originalUrl(img),
+				name: img.name
 			};
 		})
 	);
+
+	/**
+	 * Fire-and-forget engagement beacon (opens, downloads). Uses `sendBeacon` so it
+	 * survives the navigation a download triggers; failures are swallowed so
+	 * tracking can never disturb the gallery. See `/g/[id]/track`.
+	 */
+	function track(type: 'zoom' | 'download' | 'download_all', name: string | undefined = undefined) {
+		try {
+			if (typeof navigator === 'undefined' || !navigator.sendBeacon) return;
+			navigator.sendBeacon(`/g/${data.id}/track`, JSON.stringify({ type, name }));
+		} catch {
+			// best-effort only
+		}
+	}
 
 	// Native CSS masonry handles layout via @supports in the style block. JS is only
 	// a polyfill, enabled on mount when the browser lacks native masonry support.
@@ -126,6 +142,7 @@
 						lb.pswp.on('change', () => {
 							el.href = items[lb.pswp.currIndex].origUrl;
 						});
+						el.addEventListener('click', () => track('download', items[lb.pswp.currIndex]?.name));
 					}
 				});
 			});
@@ -145,7 +162,9 @@
 	<div class="meta">
 		<span>{data.images.length} photo{data.images.length === 1 ? '' : 's'}</span>
 		{#if data.images.length > 0}
-			<a class="download-all" href={`/g/${data.id}/download`}>Download all</a>
+			<a class="download-all" href={`/g/${data.id}/download`} onclick={() => track('download_all')}
+				>Download all</a
+			>
 		{/if}
 	</div>
 </header>
@@ -163,7 +182,10 @@
 			<button
 				class="tile"
 				type="button"
-				onclick={() => lightbox?.loadAndOpen(i)}
+				onclick={() => {
+					track('zoom', img.name);
+					lightbox?.loadAndOpen(i);
+				}}
 				aria-label={`Open ${img.name}`}
 				style={tileStyle(i, ar)}
 			>
