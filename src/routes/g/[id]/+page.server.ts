@@ -23,7 +23,7 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
 
 	// SSR + CDN edge cache: rebuilt at most ~10 min, not per visitor. This s-maxage
 	// also bounds how quickly a revocation propagates to a cached page. See ADR-0004.
-	setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400' });
+	setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400' });
 
 	return { id: params.id, title: gallery.title, images: gallery.images };
 };
