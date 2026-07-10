@@ -4,7 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { SESSION_SECRET } from '$app/env/private';
 import { createSessionValue, SESSION_COOKIE, SESSION_MAX_AGE } from '$lib/server/session';
 import { getGalleryService } from '$lib/server/gallery/service';
-import { getGalleryStore } from '$lib/server/gallery/store';
+import { getGalleryStore, galleryPath } from '$lib/server/gallery/store';
 import { getUserStore } from '$lib/server/auth/users';
 import { verifyPassword } from '$lib/server/password';
 
@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 	const galleries = records.map((g) => ({
 		id: g.id,
 		title: g.title,
-		url: `${url.origin}/g/${activeSlugs.get(g.id) ?? g.id}`,
+		url: `${url.origin}${galleryPath(g.id, activeSlugs.get(g.id) ?? null)}`,
 		createdAt: g.createdAt,
 		expiresAt: g.expiresAt,
 		revokedAt: g.revokedAt
@@ -87,7 +87,8 @@ export const actions: Actions = {
 			expiresAt
 		});
 
-		return { galleryUrl: `${url.origin}/g/${id}`, title: galleryTitle };
+		// A freshly minted gallery has no slug yet, so its link is the bare `/<id>`.
+		return { galleryUrl: `${url.origin}${galleryPath(id, null)}`, title: galleryTitle };
 	},
 
 	revoke: async ({ request, locals, platform }) => {

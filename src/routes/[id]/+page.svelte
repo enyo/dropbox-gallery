@@ -14,9 +14,9 @@
 		height?: number;
 	};
 	const enc = (id: string) => encodeURIComponent(id);
-	const gridUrl = (img: Img) => `/g/${data.id}/thumb/${enc(img.id)}?v=${img.version}`;
-	const fullUrl = (img: Img) => `/g/${data.id}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
-	const originalUrl = (img: Img) => `/g/${data.id}/original/${enc(img.id)}`;
+	const gridUrl = (img: Img) => `/${data.id}/thumb/${enc(img.id)}?v=${img.version}`;
+	const fullUrl = (img: Img) => `/${data.id}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
+	const originalUrl = (img: Img) => `/${data.id}/original/${enc(img.id)}`;
 
 	// Total photos in the gallery, counting the cover even when it's excluded from
 	// the grid — so the count and "download all" reflect the whole folder, not just
@@ -74,12 +74,12 @@
 	/**
 	 * Fire-and-forget engagement beacon (opens, downloads). Uses `sendBeacon` so it
 	 * survives the navigation a download triggers; failures are swallowed so
-	 * tracking can never disturb the gallery. See `/g/[id]/track`.
+	 * tracking can never disturb the gallery. See `/[id]/track`.
 	 */
 	function track(type: 'zoom' | 'download' | 'download_all', name: string | undefined = undefined) {
 		try {
 			if (typeof navigator === 'undefined' || !navigator.sendBeacon) return;
-			navigator.sendBeacon(`/g/${data.id}/track`, JSON.stringify({ type, name }));
+			navigator.sendBeacon(`/${data.id}/track`, JSON.stringify({ type, name }));
 		} catch {
 			// best-effort only
 		}
@@ -197,7 +197,7 @@
 <div class="toolbar">
 	<span class="count">{total} photo{total === 1 ? '' : 's'}</span>
 	{#if total > 0}
-		<a class="download-all" href={`/g/${data.id}/download`} onclick={() => track('download_all')}
+		<a class="download-all" href={`/${data.id}/download`} onclick={() => track('download_all')}
 			>Download all</a
 		>
 	{/if}

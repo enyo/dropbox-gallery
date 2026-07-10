@@ -19,7 +19,7 @@ import type { GalleryImage } from '$lib/server/gallery/types';
 import type { GallerySummary } from '$lib/server/gallery/events';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
-/** Standard Schema accepting a non-empty gallery id (the `/g/<id>` capability). */
+/** Standard Schema accepting a non-empty gallery id (the `/<id>` capability). */
 const galleryId: StandardSchemaV1<string, string> = {
 	'~standard': {
 		version: 1,

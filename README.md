@@ -11,9 +11,11 @@ edge caching).
 ## How it works
 
 - **Admin** signs in with a username + password (stored in D1, salted-hashed) and pastes a Dropbox folder share link to mint
-  a **Gallery Link** — an unguessable capability URL (`/g/<id>`). The `<id>` is the
-  primary key of a row in D1 that holds the folder reference, title, and expiry; the id
-  itself carries no readable data.
+  a **Gallery Link** — an unguessable capability URL (`/<id>`, at the site root). The `<id>`
+  is the primary key of a row in D1 that holds the folder reference, title, and expiry; the id
+  itself carries no readable data. A gallery can also carry a friendly **slug**, reached at
+  `/<hash>-<slug>` — a five-digit hash of the id prefixes the slug so it can't be guessed by
+  name alone ([ADR-0009](docs/adr/0009-root-urls-and-slug-hash.md)).
 - **Viewers** open the link and browse. Thumbnails are Dropbox's native thumbnails,
   proxied and edge-cached; originals and "download all" redirect straight to Dropbox.
 - The Admin can **list and revoke** minted galleries from `/admin`. Revocation and expiry

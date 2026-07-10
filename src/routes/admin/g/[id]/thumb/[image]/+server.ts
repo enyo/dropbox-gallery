@@ -5,7 +5,7 @@ import { ImageNotFoundError } from '$lib/server/gallery/types';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
 /**
- * Admin-facing thumbnails. The viewer thumb route (`/g/<id>/thumb/...`) only
+ * Admin-facing thumbnails. The viewer thumb route (`/<id>/thumb/...`) only
  * serves live galleries, so the admin needs its own endpoint to preview photos
  * of expired or revoked galleries. Gated on the admin session; the response is
  * marked `private` to keep these out of any shared/edge cache.

@@ -1,7 +1,7 @@
 /**
  * D1-backed persistence for galleries. A gallery row's primary key is the
  * Gallery Link capability itself: an unguessable random id that appears in the
- * URL as `/g/<id>`. Persisting galleries (instead of encoding them into signed
+ * URL as `/<id>`. Persisting galleries (instead of encoding them into signed
  * tokens) is what makes per-link revocation and an admin listing possible.
  * See ADR-0003.
  */
@@ -39,7 +39,7 @@ interface GalleryRow {
 	cover_excluded: number;
 }
 
-/** Outcome of resolving a `/g/<id>` capability, distinguishing why access failed. */
+/** Outcome of resolving a `/<id>` capability, distinguishing why access failed. */
 export type GalleryLookup =
 	| { status: 'ok'; ref: GalleryRef }
 	| { status: 'expired' }
@@ -47,7 +47,7 @@ export type GalleryLookup =
 	| { status: 'not-found' };
 
 /**
- * Resolving a `/g/<idOrSlug>` path, carrying the canonical gallery id alongside the
+ * Resolving a public gallery path, carrying the canonical gallery id alongside the
  * lookup. `galleryId` is set whenever the path named a real gallery (even an expired or
  * revoked one), so callers that key data by gallery id — e.g. engagement counters — can
  * do so under the canonical id no matter which slug the viewer arrived on.
@@ -93,6 +93,50 @@ export function normalizeSlug(input: string): string {
  */
 export function isValidSlug(slug: string): boolean {
 	return slug.length <= MAX_SLUG_LENGTH && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+}
+
+/**
+ * A short, deterministic decimal code derived from a gallery id. It prefixes a slug in the
+ * public URL (`/<hash>-<slug>`) so a slug can't be reached by guessing the name alone: the
+ * five digits are a function of the unguessable id, so you must already hold (or brute a
+ * ~100k space against) the id to construct a working slug URL. It is deliberately weak —
+ * an obstacle to casual guessing and scraping, not a capability. The id remains the real
+ * secret. FNV-1a folded to five digits; not collision-free, and that's fine (a collision
+ * would only let one gallery's slug URL also resolve another's — both are still the
+ * owner's own galleries, and the slug table's global uniqueness is unaffected).
+ */
+export function slugHash(id: string): string {
+	let h = 0x811c9dc5;
+	for (let i = 0; i < id.length; i++) {
+		h ^= id.charCodeAt(i);
+		h = Math.imul(h, 0x01000193);
+	}
+	return String((h >>> 0) % 100000).padStart(5, '0');
+}
+
+/** Matches a public `<hash>-<slug>` segment: five digits, a hyphen, then the slug. */
+const SLUG_PATH_RE = /^(\d{5})-(.+)$/;
+
+/**
+ * Split a public `<hash>-<slug>` path segment into its parts, or null when it isn't that
+ * shape. The slug takes the whole remainder so it may itself contain hyphens
+ * (`04213-summer-2026` → hash `04213`, slug `summer-2026`). The hash is not checked
+ * against any gallery here — {@link GalleryStore.resolveByPath} does that.
+ */
+export function parseSlugPath(segment: string): { hash: string; slug: string } | null {
+	const m = SLUG_PATH_RE.exec(segment);
+	if (!m) return null;
+	const [, hash, slug] = m;
+	return isValidSlug(slug) ? { hash, slug } : null;
+}
+
+/**
+ * The canonical public path a gallery settles on: `/<hash>-<slug>` when it has an active
+ * slug, otherwise the bare `/<id>`. The single place the public URL shape is built, shared
+ * by the page's canonical redirect and every admin-facing link.
+ */
+export function galleryPath(galleryId: string, activeSlug: string | null): string {
+	return activeSlug ? `/${slugHash(galleryId)}-${activeSlug}` : `/${galleryId}`;
 }
 
 /**
@@ -163,7 +207,7 @@ export class GalleryStore {
 		this.#db = db;
 	}
 
-	/** Persist a new gallery and return its capability id (the `/g/<id>` value). */
+	/** Persist a new gallery and return its capability id (the `/<id>` value). */
 	async create(input: {
 		folderId: string;
 		shareUrl: string;
@@ -193,17 +237,27 @@ export class GalleryStore {
 	}
 
 	/**
-	 * Resolve a `/g/<idOrSlug>` path to a gallery. The id always wins: a match on the
-	 * capability id is used directly; only if none exists is the value tried as a slug.
+	 * Resolve a public path segment to a gallery. Two forms resolve, and the id always
+	 * wins: the bare capability id (`/<id>`), used directly on a match; and a hash-prefixed
+	 * slug (`/<hash>-<slug>`), tried only when no gallery has that id. A slug's five-digit
+	 * prefix must equal its gallery's {@link slugHash}, so a slug can't be reached by
+	 * guessing the name alone — a bare slug, or one carrying the wrong hash, is a 404.
 	 * Any known slug resolves here — active or stale — so assets and beacons keep working
 	 * even on an old slug; the page route is what redirects a stale slug to the active one.
 	 */
-	async resolveByPath(idOrSlug: string, now = Date.now()): Promise<PathLookup> {
-		const byId = await this.#rowById(idOrSlug);
+	async resolveByPath(segment: string, now = Date.now()): Promise<PathLookup> {
+		const byId = await this.#rowById(segment);
 		if (byId) return { lookup: resolveRow(byId, now), galleryId: byId.id };
 
-		const slug = await this.#slugRow(idOrSlug);
+		const parsed = parseSlugPath(segment);
+		if (!parsed) return { lookup: { status: 'not-found' }, galleryId: null };
+
+		const slug = await this.#slugRow(parsed.slug);
 		if (!slug) return { lookup: { status: 'not-found' }, galleryId: null };
+		// The prefix must be this slug's gallery's hash, else the slug is treated as unknown.
+		if (slugHash(slug.gallery_id) !== parsed.hash) {
+			return { lookup: { status: 'not-found' }, galleryId: null };
+		}
 		const row = await this.#rowById(slug.gallery_id);
 		if (!row) return { lookup: { status: 'not-found' }, galleryId: null }; // dangling slug
 		return { lookup: resolveRow(row, now), galleryId: row.id };

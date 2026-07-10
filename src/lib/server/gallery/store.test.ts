@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { resolveRow, newGalleryId, normalizeSlug, isValidSlug, decideSlugClaim } from './store';
+import {
+	resolveRow,
+	newGalleryId,
+	normalizeSlug,
+	isValidSlug,
+	decideSlugClaim,
+	slugHash,
+	parseSlugPath,
+	galleryPath
+} from './store';
 
 const baseRow = {
 	id: 'abc',
@@ -92,6 +101,53 @@ describe('isValidSlug', () => {
 	it('rejects slugs longer than 64 chars', () => {
 		expect(isValidSlug('a'.repeat(64))).toBe(true);
 		expect(isValidSlug('a'.repeat(65))).toBe(false);
+	});
+});
+
+describe('slugHash', () => {
+	it('is a five-digit decimal code, zero-padded', () => {
+		for (let i = 0; i < 50; i++) {
+			expect(slugHash(newGalleryId())).toMatch(/^\d{5}$/);
+		}
+	});
+
+	it('is deterministic for a given id', () => {
+		const id = newGalleryId();
+		expect(slugHash(id)).toBe(slugHash(id));
+	});
+
+	it('generally differs between ids', () => {
+		// Not a guarantee (collisions exist in a 100k space), but two random ids should
+		// almost never collide — a broken hash returning a constant would fail this.
+		expect(slugHash('aaaaaaaaaaaaaaaaaaaaaa')).not.toBe(slugHash('bbbbbbbbbbbbbbbbbbbbbb'));
+	});
+});
+
+describe('parseSlugPath', () => {
+	it('splits a five-digit hash from the slug, keeping hyphens in the slug', () => {
+		expect(parseSlugPath('04213-summer-2026')).toEqual({ hash: '04213', slug: 'summer-2026' });
+	});
+
+	it('rejects a missing, short, or long hash prefix', () => {
+		expect(parseSlugPath('summer-2026')).toBeNull(); // bare slug — no hash
+		expect(parseSlugPath('4213-summer')).toBeNull(); // four digits
+		expect(parseSlugPath('042135-summer')).toBeNull(); // six digits
+	});
+
+	it('rejects a valid hash followed by an invalid slug', () => {
+		expect(parseSlugPath('04213-Summer')).toBeNull(); // uppercase
+		expect(parseSlugPath('04213-')).toBeNull(); // empty slug
+		expect(parseSlugPath('04213--x')).toBeNull(); // doubled hyphen
+	});
+});
+
+describe('galleryPath', () => {
+	it('is the bare id when the gallery has no slug', () => {
+		expect(galleryPath('cap-id', null)).toBe('/cap-id');
+	});
+
+	it('prefixes the id hash when the gallery has an active slug', () => {
+		expect(galleryPath('cap-id', 'summer-2026')).toBe(`/${slugHash('cap-id')}-summer-2026`);
 	});
 });
 
