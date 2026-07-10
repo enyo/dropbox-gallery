@@ -1,6 +1,6 @@
-import type { RequestHandler } from './$types';
-import { getGalleryStore } from '$lib/server/gallery/store';
-import { getEventStore, isGalleryEventType } from '$lib/server/gallery/events';
+import type { RequestHandler } from "./$types";
+import { getGalleryStore } from "$lib/server/gallery/store";
+import { getEventStore, isGalleryEventType } from "$lib/server/gallery/events";
 
 /** Cap a stored filename; Dropbox names are ≤255, this is slack against garbage. */
 const MAX_NAME = 512;
@@ -14,28 +14,28 @@ const MAX_NAME = 512;
  * galleries are recorded.
  */
 export const POST: RequestHandler = async ({ params, request, platform }) => {
-	const noContent = new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
+  const noContent = new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
 
-	// Resolve id-or-slug to the canonical gallery id so counters land under one key no
-	// matter which slug the viewer arrived on.
-	const { lookup, galleryId } = await getGalleryStore(platform).resolveByPath(params.id);
-	if (lookup.status !== 'ok' || !galleryId) return noContent;
+  // Resolve id-or-slug to the canonical gallery id so counters land under one key no
+  // matter which slug the viewer arrived on.
+  const { lookup, galleryId } = await getGalleryStore(platform).resolveByPath(params.id);
+  if (lookup.status !== "ok" || !galleryId) return noContent;
 
-	let type: unknown;
-	let name: unknown;
-	try {
-		({ type, name } = JSON.parse(await request.text()));
-	} catch {
-		return noContent;
-	}
-	if (!isGalleryEventType(type)) return noContent;
+  let type: unknown;
+  let name: unknown;
+  try {
+    ({ type, name } = JSON.parse(await request.text()));
+  } catch {
+    return noContent;
+  }
+  if (!isGalleryEventType(type)) return noContent;
 
-	// download_all names no image; zoom/download need a usable filename or are dropped.
-	const imageName =
-		typeof name === 'string' && name.length > 0 && name.length <= MAX_NAME ? name : null;
-	if (type === 'download_all' || imageName) {
-		await getEventStore(platform).record(galleryId, type, imageName);
-	}
+  // download_all names no image; zoom/download need a usable filename or are dropped.
+  const imageName =
+    typeof name === "string" && name.length > 0 && name.length <= MAX_NAME ? name : null;
+  if (type === "download_all" || imageName) {
+    await getEventStore(platform).record(galleryId, type, imageName);
+  }
 
-	return noContent;
+  return noContent;
 };

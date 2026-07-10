@@ -7,30 +7,30 @@
  */
 
 .pswp {
-	--pswp-bg: #000;
-	--pswp-bg-element: #0000004d;
+  --pswp-bg: #000;
+  --pswp-bg-element: #0000004d;
 }
 
 /* Very subtle dark scrim behind the top bar so the counter/close read over
    bright photos without a hard edge. */
 .pswp__top-bar {
-	background: var(--pswp-bg-element);
+  background: var(--pswp-bg-element);
 }
 
 /* Dim every control to ~75%, full on hover — the reference's quiet chrome. */
 .pswp__button {
-	opacity: 0.75;
-	transition: opacity 0.2s ease;
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
 }
 .pswp__button:hover,
 .pswp__button:focus-visible {
-	opacity: 1;
+  opacity: 1;
 }
 
 /* Minimal chrome: no zoom button (pinch / double-click still zoom). The
    two-class selector outranks PhotoSwipe's own `.pswp--zoom-allowed` show rule. */
 .pswp .pswp__button--zoom {
-	display: none;
+  display: none;
 }
 
 /*
@@ -42,54 +42,54 @@
 .pswp__button--arrow .pswp__icn,
 .pswp__button--close .pswp__icn,
 .pswp__button--download .pswp__icn {
-	display: none;
+  display: none;
 }
 
 .pswp__button--close::after,
 .pswp__button--arrow::after,
 .pswp__button--download::after {
-	content: '';
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 30px;
-	height: 30px;
-	transform: translate(-50%, -50%);
-	background-repeat: no-repeat;
-	background-size: 30px 30px;
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  background-repeat: no-repeat;
+  background-size: 30px 30px;
 }
 .pswp__button--close::after {
-	background-image: url(./close.svg);
+  background-image: url(./close.svg);
 }
 .pswp__button--arrow--prev::after {
-	background-image: url(./arrow-prev.svg);
+  background-image: url(./arrow-prev.svg);
 }
 .pswp__button--arrow--next::after {
-	background-image: url(./arrow-next.svg);
+  background-image: url(./arrow-next.svg);
 }
 .pswp__button--download::after {
-	background-image: url(./download.svg);
+  background-image: url(./download.svg);
 }
 
 /* Faint square scrim behind the prev/next arrows — invisible on the black
    letterbox, a soft patch over the photo. Sits under the sprite glyph above. */
 .pswp__button--arrow::before {
-	content: '';
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 40px;
-	height: 38px;
-	background: var(--pswp-bg-element);
-	transform: translate(-50%, -50%);
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 38px;
+  background: var(--pswp-bg-element);
+  transform: translate(-50%, -50%);
 }
 
 /* Counter: small, dim, medium weight with a soft shadow for bright photos. */
 .pswp__counter {
-	opacity: 0.75;
-	font-size: 13px;
-	font-weight: 500;
-	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  opacity: 0.75;
+  font-size: 13px;
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /*
@@ -98,10 +98,10 @@
  */
 .pswp__top-bar,
 .pswp__button--arrow {
-	transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease;
 }
 .pswp--ui-idle .pswp__top-bar,
 .pswp--ui-idle .pswp__button--arrow {
-	opacity: 0;
-	pointer-events: none;
+  opacity: 0;
+  pointer-events: none;
 }

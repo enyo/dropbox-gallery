@@ -1,32 +1,32 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "main",
-	// Bump when adopting newer Workers runtime behaviour; keep in sync with `wrangler`.
-	"compatibility_date": "2026-07-01",
-	// nodejs_compat gives us `node:crypto` (HMAC signing) and `Buffer`, which the app uses.
-	"compatibility_flags": ["nodejs_compat"],
-	// Built by `@sveltejs/adapter-cloudflare`; only used by `wrangler deploy` / `wrangler dev`.
-	// Local `vite dev` ignores these and serves through Vite + platformProxy instead.
-	"main": ".svelte-kit/cloudflare/_worker.js",
-	"assets": {
-		"binding": "ASSETS",
-		"directory": ".svelte-kit/cloudflare"
-	},
-	"observability": {
-		"logs": {
-			"enabled": true,
-			"invocation_logs": true
-		},
-		"traces": {
-			"enabled": false
-		}
-	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "dropbox-gallery",
-			"database_id": "7755817d-59ea-4ac0-a87e-40035becb44f",
-			"migrations_dir": "migrations"
-		}
-	]
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "main",
+  // Bump when adopting newer Workers runtime behaviour; keep in sync with `wrangler`.
+  "compatibility_date": "2026-07-01",
+  // nodejs_compat gives us `node:crypto` (HMAC signing) and `Buffer`, which the app uses.
+  "compatibility_flags": ["nodejs_compat"],
+  // Built by `@sveltejs/adapter-cloudflare`; only used by `wrangler deploy` / `wrangler dev`.
+  // Local `vite dev` ignores these and serves through Vite + platformProxy instead.
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare",
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": false,
+    },
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dropbox-gallery",
+      "database_id": "7755817d-59ea-4ac0-a87e-40035becb44f",
+      "migrations_dir": "migrations",
+    },
+  ],
 }
