@@ -71,6 +71,20 @@
 		})
 	);
 
+	// Social share card (Open Graph / Twitter). Crawlers don't run JS and need an
+	// absolute, publicly reachable image URL, so the cover is emitted straight into
+	// <svelte:head> at its served size — a `summary_large_image` card that shows the
+	// cover photo big with the title beneath it. Falls back to a plain card (no image)
+	// for an empty gallery.
+	const share = $derived.by(() => {
+		const c = data.cover;
+		if (!c) return null;
+		const ar = c.width && c.height ? c.width / c.height : DEFAULT_ASPECT;
+		const [width, height] = fitFull(ar);
+		return { url: `${data.origin}${fullUrl(c)}`, width, height };
+	});
+	const shareDescription = $derived(total > 0 ? `${total} photo${total === 1 ? '' : 's'}` : '');
+
 	/**
 	 * Fire-and-forget engagement beacon (opens, downloads). Uses `sendBeacon` so it
 	 * survives the navigation a download triggers; failures are swallowed so
@@ -180,6 +194,29 @@
 
 <svelte:head>
 	<title>{data.title}</title>
+	{#if shareDescription}
+		<meta name="description" content={shareDescription} />
+	{/if}
+
+	<!-- Open Graph / Twitter share card -->
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content={data.title} />
+	<meta property="og:url" content={`${data.origin}/${data.id}`} />
+	<meta name="twitter:title" content={data.title} />
+	{#if shareDescription}
+		<meta property="og:description" content={shareDescription} />
+		<meta name="twitter:description" content={shareDescription} />
+	{/if}
+	{#if share}
+		<meta property="og:image" content={share.url} />
+		<meta property="og:image:width" content={String(share.width)} />
+		<meta property="og:image:height" content={String(share.height)} />
+		<meta property="og:image:alt" content={data.title} />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:image" content={share.url} />
+	{:else}
+		<meta name="twitter:card" content="summary" />
+	{/if}
 </svelte:head>
 
 {#if data.cover}

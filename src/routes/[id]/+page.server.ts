@@ -4,7 +4,7 @@ import { getGalleryStore, galleryPath } from '$lib/server/gallery/store';
 import { getGalleryService } from '$lib/server/gallery/service';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
-export const load: PageServerLoad = async ({ params, platform, setHeaders }) => {
+export const load: PageServerLoad = async ({ params, url, platform, setHeaders }) => {
 	const store = getGalleryStore(platform);
 	const { lookup, galleryId } = await store.resolveByPath(params.id);
 	if (lookup.status === 'expired') throw error(410, 'This gallery link is no longer active.');
@@ -35,5 +35,13 @@ export const load: PageServerLoad = async ({ params, platform, setHeaders }) => 
 	// also bounds how quickly a revocation propagates to a cached page. See ADR-0004.
 	setHeaders({ 'cache-control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400' });
 
-	return { id: params.id, title: gallery.title, cover: gallery.cover, images: gallery.images };
+	// `origin` lets the page emit absolute og:image / og:url URLs for social share
+	// cards — crawlers can't resolve relative paths.
+	return {
+		id: params.id,
+		origin: url.origin,
+		title: gallery.title,
+		cover: gallery.cover,
+		images: gallery.images
+	};
 };
