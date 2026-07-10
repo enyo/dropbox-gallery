@@ -308,6 +308,14 @@
   </div>
 {/if}
 
+<footer>
+  <span>Hannah Mayr &copy; {new Date().getFullYear()}</span>
+  ·
+  <a href="https://hannahmayr.com/agb">AGB</a>
+  <a href="https://hannahmayr.com/impressum">Impressum</a>
+  <a href="https://hannahmayr.com/datenschutz">Datenschutz</a>
+</footer>
+
 <style>
   /* Full-screen hero: the cover image fills the viewport with the title laid
 	 * boldly over it, a gradient scrim keeping the text legible on any photo. */
@@ -395,20 +403,12 @@
 	 * only when native support is absent.
 	 */
   .grid {
-    margin: 0 var(--gap) 240px;
+    margin: 0 var(--gap) 320px;
     padding: 0 0 60px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     grid-template-rows: masonry;
     gap: var(--gap);
-
-    /* &:has(.tile:hover) {
-			@media (pointer: fine) {
-				.tile:not(:hover) {
-					opacity: 0.8;
-				}
-			}
-		} */
   }
   @supports (display: masonry) {
     .grid:not(.js) {
@@ -496,6 +496,22 @@
       opacity: 1;
       transform: translateY(0);
       pointer-events: auto;
+    }
+  }
+
+  footer {
+    margin: 48px var(--gap);
+    text-align: center;
+
+    &,
+    > * {
+      font-size: 0.875rem;
+      color: var(--color-text-dim);
+    }
+    a,
+    span {
+      text-decoration: none;
+      margin: 0 6px;
     }
   }
 </style>
