@@ -119,6 +119,7 @@
 			const { default: PhotoSwipeLightbox } = await import('photoswipe/lightbox');
 			lb = new PhotoSwipeLightbox({
 				dataSource: items,
+				bgOpacity: 1, // full black backdrop, not semitransparent
 				pswpModule: () => import('photoswipe')
 			});
 			lb.on('uiRegister', () => {
