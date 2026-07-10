@@ -401,6 +401,7 @@
 	   glyph as the lightbox, so the white icon reads over any photo. Revealed on
 	   hover — see the pointer:fine rules below. */
 	.tile-download {
+		opacity: 0;
 		position: absolute;
 		top: 8px;
 		right: 8px;
@@ -427,7 +428,6 @@
 	   tile is hovered or focused. Touch devices, which never hover, always show it. */
 	@media (pointer: fine) {
 		.tile-download {
-			opacity: 0;
 			transform: translateY(-4px);
 			pointer-events: none;
 		}
