@@ -1,4 +1,17 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": []
+  "ignorePatterns": [
+    // Package Managers
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "bun.lockb",
+
+    // # Miscellaneous
+    "/static/",
+
+    // # Vendored tooling (skills, agent config)
+    "/.claude/"
+  ]
 }
