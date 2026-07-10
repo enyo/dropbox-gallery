@@ -145,6 +145,21 @@
 					}
 				});
 			});
+			// Fade the chrome out after a couple of idle seconds; any pointer
+			// movement wakes it back up. Mirrors the reference lightbox.
+			lb.on('afterInit', () => {
+				const pswp = lb.pswp;
+				const root: HTMLElement = pswp.element;
+				let timer: ReturnType<typeof setTimeout>;
+				const wake = () => {
+					root.classList.remove('pswp--ui-idle');
+					clearTimeout(timer);
+					timer = setTimeout(() => root.classList.add('pswp--ui-idle'), 2500);
+				};
+				root.addEventListener('pointermove', wake);
+				pswp.on('destroy', () => clearTimeout(timer));
+				wake();
+			});
 			lb.init();
 			lightbox = lb;
 		})();
