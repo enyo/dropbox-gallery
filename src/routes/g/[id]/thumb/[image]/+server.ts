@@ -5,7 +5,7 @@ import { ImageNotFoundError } from '$lib/server/gallery/types';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
 export const GET: RequestHandler = async ({ params, url, platform }) => {
-	const lookup = await getGalleryStore(platform).resolve(params.id);
+	const { lookup } = await getGalleryStore(platform).resolveByPath(params.id);
 	if (lookup.status !== 'ok') return new Response('Not found', { status: 404 });
 
 	const size = url.searchParams.get('size') === 'full' ? 'full' : 'grid';

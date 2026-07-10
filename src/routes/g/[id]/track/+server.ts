@@ -16,8 +16,10 @@ const MAX_NAME = 512;
 export const POST: RequestHandler = async ({ params, request, platform }) => {
 	const noContent = new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
 
-	const lookup = await getGalleryStore(platform).resolve(params.id);
-	if (lookup.status !== 'ok') return noContent;
+	// Resolve id-or-slug to the canonical gallery id so counters land under one key no
+	// matter which slug the viewer arrived on.
+	const { lookup, galleryId } = await getGalleryStore(platform).resolveByPath(params.id);
+	if (lookup.status !== 'ok' || !galleryId) return noContent;
 
 	let type: unknown;
 	let name: unknown;
@@ -32,7 +34,7 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 	const imageName =
 		typeof name === 'string' && name.length > 0 && name.length <= MAX_NAME ? name : null;
 	if (type === 'download_all' || imageName) {
-		await getEventStore(platform).record(params.id, type, imageName);
+		await getEventStore(platform).record(galleryId, type, imageName);
 	}
 
 	return noContent;

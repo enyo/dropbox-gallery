@@ -46,6 +46,76 @@ export type GalleryLookup =
 	| { status: 'revoked' }
 	| { status: 'not-found' };
 
+/**
+ * Resolving a `/g/<idOrSlug>` path, carrying the canonical gallery id alongside the
+ * lookup. `galleryId` is set whenever the path named a real gallery (even an expired or
+ * revoked one), so callers that key data by gallery id — e.g. engagement counters — can
+ * do so under the canonical id no matter which slug the viewer arrived on.
+ */
+export interface PathLookup {
+	lookup: GalleryLookup;
+	galleryId: string | null;
+}
+
+/** The raw `gallery_slugs` row shape. */
+interface SlugRow {
+	slug: string;
+	gallery_id: string;
+	created_at: number;
+}
+
+/** What setting a slug on a gallery should do, given the slug's current state. */
+export type SlugClaim =
+	| { action: 'insert' } // no such slug yet — create it
+	| { action: 'reclaim' } // exists but is claimable — reassign it (becomes active)
+	| { action: 'noop' } // already this gallery's active slug — nothing to do
+	| { action: 'reject' }; // is another gallery's active slug — cannot take it
+
+/** Outcome of {@link GalleryStore.addSlug}. */
+export type AddSlugResult = { ok: true } | { ok: false; reason: 'invalid' | 'taken' };
+
+/** Longest slug we store — comfortably longer than any sensible link name. */
+const MAX_SLUG_LENGTH = 64;
+
+/**
+ * Normalise operator input into canonical slug form: trimmed and lowercased. The
+ * displayed and stored forms then always match, so reclaiming an old slug means typing
+ * what you see.
+ */
+export function normalizeSlug(input: string): string {
+	return input.trim().toLowerCase();
+}
+
+/**
+ * A valid slug is one or more lowercase-alphanumeric groups joined by single hyphens
+ * (so no leading, trailing, or doubled hyphens), at most {@link MAX_SLUG_LENGTH} chars.
+ * Kept deliberately narrow so a slug is always a clean, unambiguous URL segment.
+ */
+export function isValidSlug(slug: string): boolean {
+	return slug.length <= MAX_SLUG_LENGTH && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+}
+
+/**
+ * Decide what setting `slug` for `galleryId` should do, given the existing slug's owner
+ * and whether it is that owner's active slug. Pure, so the claim rules are unit-testable
+ * without a database:
+ *   - unknown slug            → insert
+ *   - your own active slug    → no-op (already set)
+ *   - your own stale slug     → reclaim (re-activates it)
+ *   - another gallery's stale → reclaim (allowed: stale slugs are up for grabs)
+ *   - another gallery's active→ reject (an active slug can never be stolen)
+ */
+export function decideSlugClaim(
+	galleryId: string,
+	existing: { galleryId: string; isActive: boolean } | null
+): SlugClaim {
+	if (!existing) return { action: 'insert' };
+	if (existing.galleryId === galleryId) {
+		return existing.isActive ? { action: 'noop' } : { action: 'reclaim' };
+	}
+	return existing.isActive ? { action: 'reject' } : { action: 'reclaim' };
+}
+
 function toRecord(row: GalleryRow): GalleryRecord {
 	return {
 		id: row.id,
@@ -111,13 +181,106 @@ export class GalleryStore {
 		return id;
 	}
 
-	/** Resolve a capability id to a gallery reference, or the reason it's unavailable. */
-	async resolve(id: string, now = Date.now()): Promise<GalleryLookup> {
+	async #rowById(id: string): Promise<GalleryRow | null> {
+		return this.#db.prepare(`SELECT * FROM galleries WHERE id = ?`).bind(id).first<GalleryRow>();
+	}
+
+	async #slugRow(slug: string): Promise<SlugRow | null> {
+		return this.#db
+			.prepare(`SELECT * FROM gallery_slugs WHERE slug = ?`)
+			.bind(slug)
+			.first<SlugRow>();
+	}
+
+	/**
+	 * Resolve a `/g/<idOrSlug>` path to a gallery. The id always wins: a match on the
+	 * capability id is used directly; only if none exists is the value tried as a slug.
+	 * Any known slug resolves here — active or stale — so assets and beacons keep working
+	 * even on an old slug; the page route is what redirects a stale slug to the active one.
+	 */
+	async resolveByPath(idOrSlug: string, now = Date.now()): Promise<PathLookup> {
+		const byId = await this.#rowById(idOrSlug);
+		if (byId) return { lookup: resolveRow(byId, now), galleryId: byId.id };
+
+		const slug = await this.#slugRow(idOrSlug);
+		if (!slug) return { lookup: { status: 'not-found' }, galleryId: null };
+		const row = await this.#rowById(slug.gallery_id);
+		if (!row) return { lookup: { status: 'not-found' }, galleryId: null }; // dangling slug
+		return { lookup: resolveRow(row, now), galleryId: row.id };
+	}
+
+	/** The active (newest) slug for a gallery, or null when it has none. */
+	async activeSlug(galleryId: string): Promise<string | null> {
 		const row = await this.#db
-			.prepare(`SELECT * FROM galleries WHERE id = ?`)
-			.bind(id)
-			.first<GalleryRow>();
-		return resolveRow(row, now);
+			.prepare(
+				`SELECT slug FROM gallery_slugs WHERE gallery_id = ?
+				 ORDER BY created_at DESC, rowid DESC LIMIT 1`
+			)
+			.bind(galleryId)
+			.first<{ slug: string }>();
+		return row?.slug ?? null;
+	}
+
+	/** Every slug for a gallery, newest (active) first. */
+	async slugsFor(galleryId: string): Promise<string[]> {
+		const { results } = await this.#db
+			.prepare(
+				`SELECT slug FROM gallery_slugs WHERE gallery_id = ?
+				 ORDER BY created_at DESC, rowid DESC`
+			)
+			.bind(galleryId)
+			.all<{ slug: string }>();
+		return results.map((r) => r.slug);
+	}
+
+	/**
+	 * The active slug of every gallery that has one, keyed by gallery id. One scan feeds
+	 * the admin listing so each row can show its prettiest URL without an N+1 of lookups.
+	 */
+	async activeSlugByGallery(): Promise<Map<string, string>> {
+		const { results } = await this.#db
+			.prepare(`SELECT gallery_id, slug FROM gallery_slugs ORDER BY created_at DESC, rowid DESC`)
+			.all<{ gallery_id: string; slug: string }>();
+		const map = new Map<string, string>();
+		for (const r of results) if (!map.has(r.gallery_id)) map.set(r.gallery_id, r.slug);
+		return map;
+	}
+
+	/**
+	 * Add (or re-activate) a slug for a gallery, enforcing the claim rules in
+	 * {@link decideSlugClaim}. The freshly written row is the newest, so it becomes the
+	 * gallery's active slug. Returns why it was rejected when it cannot be claimed.
+	 */
+	async addSlug(galleryId: string, rawSlug: string, now = Date.now()): Promise<AddSlugResult> {
+		const slug = normalizeSlug(rawSlug);
+		if (!isValidSlug(slug)) return { ok: false, reason: 'invalid' };
+
+		const existingRow = await this.#slugRow(slug);
+		const existing = existingRow
+			? {
+					galleryId: existingRow.gallery_id,
+					isActive: (await this.activeSlug(existingRow.gallery_id)) === slug
+				}
+			: null;
+
+		const decision = decideSlugClaim(galleryId, existing);
+		if (decision.action === 'reject') return { ok: false, reason: 'taken' };
+		if (decision.action === 'noop') return { ok: true };
+
+		// Reclaiming deletes the old row first, so the re-inserted one gets a fresh rowid
+		// and created_at and is unambiguously the newest — hence active — slug.
+		const insert = this.#db
+			.prepare(`INSERT INTO gallery_slugs (slug, gallery_id, created_at) VALUES (?, ?, ?)`)
+			.bind(slug, galleryId, now);
+		if (decision.action === 'reclaim') {
+			await this.#db.batch([
+				this.#db.prepare(`DELETE FROM gallery_slugs WHERE slug = ?`).bind(slug),
+				insert
+			]);
+		} else {
+			await insert.run();
+		}
+		return { ok: true };
 	}
 
 	/**
@@ -181,12 +344,16 @@ export class GalleryStore {
 	}
 
 	/**
-	 * Permanently delete a gallery row. The capability id becomes unresolvable
-	 * (a 404, not a 410 like revocation). Returns true if a row was removed.
+	 * Permanently delete a gallery row and all of its slugs. The capability id and every
+	 * slug become unresolvable (a 404, not a 410 like revocation). Returns true if the
+	 * gallery row was removed.
 	 */
 	async delete(id: string): Promise<boolean> {
-		const { meta } = await this.#db.prepare(`DELETE FROM galleries WHERE id = ?`).bind(id).run();
-		return meta.changes > 0;
+		const [, gallery] = await this.#db.batch([
+			this.#db.prepare(`DELETE FROM gallery_slugs WHERE gallery_id = ?`).bind(id),
+			this.#db.prepare(`DELETE FROM galleries WHERE id = ?`).bind(id)
+		]);
+		return gallery.meta.changes > 0;
 	}
 }
 

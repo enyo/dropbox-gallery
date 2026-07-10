@@ -18,21 +18,29 @@ function statusOf(g: Pick<GalleryRecord, 'expiresAt' | 'revokedAt'>): GallerySta
 export const load: PageServerLoad = async ({ params, locals, platform, url }) => {
 	if (!locals.isAdmin) throw redirect(303, '/admin');
 
-	const record = await getGalleryStore(platform).get(params.id);
+	const store = getGalleryStore(platform);
+	const record = await store.get(params.id);
 	if (!record) throw error(404, 'This gallery does not exist.');
+
+	// Slugs newest-first; the first is the active one the gallery redirects to. The
+	// public link uses the active slug when set, otherwise the raw capability id.
+	const slugs = await store.slugsFor(record.id);
+	const activeSlug = slugs[0] ?? null;
 
 	return {
 		username: locals.username ?? null,
 		gallery: {
 			id: record.id,
 			title: record.title,
-			url: `${url.origin}/g/${record.id}`,
+			url: `${url.origin}/g/${activeSlug ?? record.id}`,
 			createdAt: record.createdAt,
 			expiresAt: record.expiresAt,
 			revokedAt: record.revokedAt,
 			coverImage: record.coverImage,
 			coverExcluded: record.coverExcluded,
-			status: statusOf(record)
+			status: statusOf(record),
+			activeSlug,
+			slugs
 		}
 	};
 };
@@ -63,6 +71,28 @@ export const actions: Actions = {
 		if (!ok) return fail(404, { error: 'This gallery does not exist.' });
 		// `use:enhance` invalidates and re-runs `load`, so the page reflects the change.
 		return { saved: true };
+	},
+
+	// Add a slug for this gallery, which becomes its active (redirected-to) slug. Old
+	// slugs are kept so their links keep resolving. A slug already taken as another
+	// gallery's active slug is rejected; a stale one may be claimed. See `addSlug`.
+	setSlug: async ({ request, params, locals, platform }) => {
+		if (!locals.isAdmin) return fail(401, { error: 'Not authenticated.' });
+		const store = getGalleryStore(platform);
+		const record = await store.get(params.id);
+		if (!record) return fail(404, { error: 'This gallery does not exist.' });
+
+		const data = await request.formData();
+		const slug = String(data.get('slug') ?? '');
+		const result = await store.addSlug(record.id, slug);
+		if (!result.ok) {
+			const slugError =
+				result.reason === 'taken'
+					? 'That slug is already in use by another gallery.'
+					: 'Use lowercase letters, numbers and hyphens — e.g. summer-2026.';
+			return fail(400, { slugError });
+		}
+		return { slugSaved: true };
 	},
 
 	// Set the cover image by filename, or clear it (empty `name`) to fall back to

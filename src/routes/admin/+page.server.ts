@@ -10,10 +10,13 @@ import { verifyPassword } from '$lib/server/password';
 
 export const load: PageServerLoad = async ({ locals, url, platform }) => {
 	if (!locals.isAdmin) return { isAdmin: false, username: null, galleries: [] };
-	const galleries = (await getGalleryStore(platform).list()).map((g) => ({
+	const store = getGalleryStore(platform);
+	// One scan maps each gallery to its active slug, so listed links use the pretty URL.
+	const [records, activeSlugs] = await Promise.all([store.list(), store.activeSlugByGallery()]);
+	const galleries = records.map((g) => ({
 		id: g.id,
 		title: g.title,
-		url: `${url.origin}/g/${g.id}`,
+		url: `${url.origin}/g/${activeSlugs.get(g.id) ?? g.id}`,
 		createdAt: g.createdAt,
 		expiresAt: g.expiresAt,
 		revokedAt: g.revokedAt

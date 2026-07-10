@@ -1,14 +1,24 @@
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getGalleryStore } from '$lib/server/gallery/store';
 import { getGalleryService } from '$lib/server/gallery/service';
 import { DropboxApiError } from '$lib/server/storage/dropbox';
 
 export const load: PageServerLoad = async ({ params, platform, setHeaders }) => {
-	const lookup = await getGalleryStore(platform).resolve(params.id);
+	const store = getGalleryStore(platform);
+	const { lookup, galleryId } = await store.resolveByPath(params.id);
 	if (lookup.status === 'expired') throw error(410, 'This gallery link is no longer active.');
 	if (lookup.status === 'revoked') throw error(410, 'This gallery link has been revoked.');
 	if (lookup.status === 'not-found') throw error(404, 'This gallery link is not valid.');
+
+	// A gallery with a slug is always shown under its active (newest) slug: whether the
+	// viewer arrived on the id or on a stale slug, redirect them to it. Only the active
+	// slug itself (or a gallery with no slug at all) renders in place. The id still wins
+	// at resolution time — it just isn't the URL the gallery settles on.
+	if (galleryId) {
+		const active = await store.activeSlug(galleryId);
+		if (active && active !== params.id) throw redirect(307, `/g/${active}`);
+	}
 
 	let gallery;
 	try {

@@ -23,13 +23,18 @@ The displayed collection of images from one **Source Folder**.
 The Dropbox folder, in the single connected account, whose images a **Gallery** displays.
 
 **Gallery Link**:
-An unguessable capability URL (`/g/<id>`) that grants a **Viewer** access to exactly one **Gallery**. Possession is access — there is no viewer login or viewer password. The `<id>` is a random, opaque key into a persisted gallery record; it carries no readable data. Carries an optional expiry, set by the **Admin** at mint time (default 90 days, may be null for never), and can be **individually revoked** by the **Admin** at any time. Expiry and revocation are the containment mechanisms (both take effect once the edge cache lapses, not instantly).
+An unguessable capability URL (`/g/<id>`) that grants a **Viewer** access to exactly one **Gallery**. Possession is access — there is no viewer login or viewer password. The `<id>` is a random, opaque key into a persisted gallery record; it carries no readable data. Carries an optional expiry, set by the **Admin** at mint time (default 90 days, may be null for never), and can be **individually revoked** by the **Admin** at any time. Expiry and revocation are the containment mechanisms (both take effect once the edge cache lapses, not instantly). A gallery may also be reached through one or more **Slugs**.
 _Avoid_: share link (collides with Dropbox's own "shared link" feature)
+
+**Slug**:
+An optional, human-readable name for a **Gallery Link** (`/g/<slug>`, e.g. `summer-2026`), chosen by the **Admin**. A convenience over the `<id>`, not a replacement: the **id always wins** when _resolving_ a URL, though once a gallery has a slug the page redirects even the id to the active slug. A gallery can hold many slugs — setting a new one keeps the old ones alive, and the newest (**active**) slug is where the id and every stale slug redirect, so renaming a link never breaks the ones already shared. Slugs are globally unique; a slug no longer active for its gallery may be claimed by another, but an **active** slug can never be taken. See [ADR-0008](docs/adr/0008-gallery-slugs.md).
+_Avoid_: alias (unspecific), vanity URL
 
 ## Relationships
 
 - A **Gallery** displays the images in exactly one **Source Folder**
 - A **Gallery Link** grants access to exactly one **Gallery**
+- A **Gallery** has zero or more **Slugs**; the newest is its active one, and each names at most one **Gallery**
 - The **Admin** mints **Gallery Links**; minting is gated by the **Admin Credentials**
 - A **Viewer** needs only the **Gallery Link** — no password
 

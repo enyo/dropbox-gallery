@@ -92,15 +92,51 @@
 		{#if data.gallery.expiresAt === null}never expires{:else}expires {fmtDate(
 				data.gallery.expiresAt
 			)}{/if}
-		{#await photosQuery}{:then { photos }} · {photos.length} photo{photos.length === 1
-				? ''
-				: 's'}{:catch}{/await}
+		{#await photosQuery then { photos }}
+			· {photos.length} photo{photos.length === 1 ? '' : 's'}{/await}
 	</p>
 	<div class="link-row">
 		<input type="text" readonly value={data.gallery.url} />
 		<button class="link" type="button" onclick={copyLink}>{copied ? 'Copied' : 'Copy link'}</button>
 		<a class="open" href={data.gallery.url} target="_blank" rel="noreferrer">Open ↗</a>
 	</div>
+
+	<section class="card">
+		<h2>Link slug</h2>
+		<p class="muted">
+			An optional friendly name for the link. The id always keeps working; adding a slug keeps every
+			earlier slug alive too and redirects them to the newest one.
+		</p>
+		<form method="POST" action="?/setSlug" use:enhance>
+			<div class="slug-row">
+				<span class="slug-prefix">/g/</span>
+				<input
+					name="slug"
+					type="text"
+					placeholder="summer-2026"
+					autocapitalize="off"
+					autocomplete="off"
+					spellcheck="false"
+				/>
+				<button class="primary" type="submit">Save slug</button>
+			</div>
+			{#if form?.slugError}<p class="error">{form.slugError}</p>{/if}
+			{#if form?.slugSaved}<p class="ok">Slug saved.</p>{/if}
+		</form>
+		{#if data.gallery.activeSlug}
+			<p class="slug-current">
+				Active slug: <code class="slug-chip">{data.gallery.activeSlug}</code>
+			</p>
+			{#if data.gallery.slugs.length > 1}
+				<div class="slug-list">
+					<span class="muted small">Also redirects here:</span>
+					{#each data.gallery.slugs.slice(1) as s (s)}<code class="slug-chip">{s}</code>{/each}
+				</div>
+			{/if}
+		{:else}
+			<p class="slug-current muted">No slug yet — the link uses the id.</p>
+		{/if}
+	</section>
 
 	<section class="card">
 		<h2>Cover image</h2>
@@ -335,6 +371,46 @@
 	.open {
 		font-size: 0.9rem;
 		white-space: nowrap;
+	}
+
+	/* Link-slug card: a `/g/` prefix, the slug input, and its save button on one row,
+	   with the active slug and any older (redirecting) slugs listed below. */
+	.slug-row {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.slug-prefix {
+		color: var(--color-text-dim);
+		font-family: ui-monospace, monospace;
+	}
+	.slug-row input {
+		flex: 1;
+		min-width: 160px;
+	}
+	.slug-row .primary {
+		margin-top: 0;
+	}
+	.slug-current {
+		font-size: 0.9rem;
+		margin: 14px 0 0;
+	}
+	.slug-list {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		margin-top: 8px;
+	}
+	.slug-chip {
+		background: var(--color-surface-2);
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		padding: 1px 7px;
+		font-size: 0.85em;
+		font-family: ui-monospace, monospace;
 	}
 	.card {
 		background: var(--color-surface);

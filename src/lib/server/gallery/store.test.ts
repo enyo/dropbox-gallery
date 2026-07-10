@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveRow, newGalleryId } from './store';
+import { resolveRow, newGalleryId, normalizeSlug, isValidSlug, decideSlugClaim } from './store';
 
 const baseRow = {
 	id: 'abc',
@@ -63,5 +63,62 @@ describe('newGalleryId', () => {
 		const b = newGalleryId();
 		expect(a).not.toBe(b);
 		expect(a).toMatch(/^[A-Za-z0-9_-]{22}$/); // base64url of 16 bytes
+	});
+});
+
+describe('normalizeSlug', () => {
+	it('trims and lowercases so stored and typed forms match', () => {
+		expect(normalizeSlug('  Summer-2026 ')).toBe('summer-2026');
+	});
+});
+
+describe('isValidSlug', () => {
+	it('accepts lowercase-alphanumeric words joined by single hyphens', () => {
+		expect(isValidSlug('summer-2026')).toBe(true);
+		expect(isValidSlug('a')).toBe(true);
+		expect(isValidSlug('2026')).toBe(true);
+	});
+
+	it('rejects empty, spaced, uppercase, and badly-hyphenated slugs', () => {
+		expect(isValidSlug('')).toBe(false);
+		expect(isValidSlug('Summer')).toBe(false); // caller normalises first, but guard anyway
+		expect(isValidSlug('summer 2026')).toBe(false);
+		expect(isValidSlug('-summer')).toBe(false);
+		expect(isValidSlug('summer-')).toBe(false);
+		expect(isValidSlug('summer--2026')).toBe(false);
+		expect(isValidSlug('déjà')).toBe(false);
+	});
+
+	it('rejects slugs longer than 64 chars', () => {
+		expect(isValidSlug('a'.repeat(64))).toBe(true);
+		expect(isValidSlug('a'.repeat(65))).toBe(false);
+	});
+});
+
+describe('decideSlugClaim', () => {
+	it('inserts a slug nobody holds', () => {
+		expect(decideSlugClaim('g1', null)).toEqual({ action: 'insert' });
+	});
+
+	it('is a no-op when it is already this gallery’s active slug', () => {
+		expect(decideSlugClaim('g1', { galleryId: 'g1', isActive: true })).toEqual({ action: 'noop' });
+	});
+
+	it('reclaims (re-activates) this gallery’s own stale slug', () => {
+		expect(decideSlugClaim('g1', { galleryId: 'g1', isActive: false })).toEqual({
+			action: 'reclaim'
+		});
+	});
+
+	it('claims another gallery’s stale slug', () => {
+		expect(decideSlugClaim('g1', { galleryId: 'g2', isActive: false })).toEqual({
+			action: 'reclaim'
+		});
+	});
+
+	it('rejects another gallery’s active slug', () => {
+		expect(decideSlugClaim('g1', { galleryId: 'g2', isActive: true })).toEqual({
+			action: 'reject'
+		});
 	});
 });
