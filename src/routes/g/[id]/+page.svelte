@@ -1,6 +1,7 @@
 <script lang="ts">
 	import 'photoswipe/style.css';
 	import './lightbox.css';
+	import downloadIcon from './download.svg';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -214,18 +215,33 @@
 		style={polyfill ? `height:${layout.height}px` : ''}
 	>
 		{#each tiles as { img, ar }, i (img.id)}
-			<button
-				class="tile"
-				type="button"
-				onclick={() => {
-					track('zoom', img.name);
-					lightbox?.loadAndOpen(i);
-				}}
-				aria-label={`Open ${img.name}`}
-				style={tileStyle(i, ar)}
-			>
-				<img src={gridUrl(img)} alt={img.name} loading="lazy" />
-			</button>
+			<div class="tile" style={tileStyle(i, ar)}>
+				<button
+					class="tile-open"
+					type="button"
+					onclick={() => {
+						track('zoom', img.name);
+						lightbox?.loadAndOpen(i);
+					}}
+					aria-label={`Open ${img.name}`}
+				>
+					<img src={gridUrl(img)} alt={img.name} loading="lazy" />
+				</button>
+				<!-- Download the original without opening the lightbox; same beacon the
+				     lightbox download fires. Sits above the open button, so a click here
+				     never zooms. -->
+				<a
+					class="tile-download"
+					href={originalUrl(img)}
+					download
+					target="_blank"
+					rel="noreferrer"
+					aria-label={`Download ${img.name}`}
+					onclick={() => track('download', img.name)}
+				>
+					<img src={downloadIcon} alt="" />
+				</a>
+			</div>
 		{/each}
 	</div>
 {/if}
@@ -352,11 +368,10 @@
 	}
 
 	.tile {
+		position: relative;
 		break-inside: avoid;
 		margin: 0 0 var(--gap);
 		width: 100%;
-		padding: 0;
-		border: none;
 		background: var(--color-surface);
 		overflow: hidden;
 		display: block;
@@ -365,10 +380,62 @@
 			transform 0.12s ease,
 			opacity 0.5s ease;
 	}
-	.tile img {
+	/* The image itself is the open-lightbox target, stretched to fill the tile
+	   (whose height comes from its inline aspect-ratio). */
+	.tile-open {
+		position: absolute;
+		inset: 0;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: none;
+	}
+	.tile-open img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 		display: block;
+	}
+
+	/* Download-original affordance: a faint dark disc bearing the same hairline
+	   glyph as the lightbox, so the white icon reads over any photo. Revealed on
+	   hover — see the pointer:fine rules below. */
+	.tile-download {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 38px;
+		height: 38px;
+		background: rgba(0, 0, 0, 0.3);
+		transition:
+			opacity 0.15s ease,
+			transform 0.15s ease,
+			background-color 0.15s ease;
+	}
+	.tile-download img {
+		width: 30px;
+		height: 30px;
+		display: block;
+	}
+	.tile-download:hover {
+		background: rgba(0, 0, 0, 0.5);
+	}
+	/* Hover-capable pointers: keep the disc hidden (and unclickable) until the
+	   tile is hovered or focused. Touch devices, which never hover, always show it. */
+	@media (pointer: fine) {
+		.tile-download {
+			opacity: 0;
+			transform: translateY(-4px);
+			pointer-events: none;
+		}
+		.tile:hover .tile-download,
+		.tile:focus-within .tile-download {
+			opacity: 1;
+			transform: translateY(0);
+			pointer-events: auto;
+		}
 	}
 </style>
