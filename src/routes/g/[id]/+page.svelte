@@ -141,8 +141,9 @@
 					order: 8,
 					isButton: true,
 					tagName: 'a',
-					// Thin line icon matching the hairline arrows/close (see lightbox.css).
-					html: '<svg class="pswp__icn" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true"><path d="M16 7v13M10.5 15.5 16 21l5.5-5.5M8.5 24h15" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+					// Icon is drawn from download.svg as a CSS background, matching the
+					// hairline arrows/close (see lightbox.css).
+					html: '',
 					onInit: (el: HTMLAnchorElement) => {
 						el.setAttribute('download', '');
 						el.setAttribute('target', '_blank');

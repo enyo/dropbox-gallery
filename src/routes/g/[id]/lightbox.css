@@ -34,26 +34,20 @@
 }
 
 /*
- * Icons come from the reference portfolio's `default-skin.svg` sprite (the same
- * artwork the original lightbox used), placed with `background-position` so each
- * button shows a single glyph. PhotoSwipe 5's own filled icons — heavy glyphs
- * wrapped in a 2px stroke "shadow" — are hidden in favour of the sprite's white
- * hairline artwork, which reads cleanly over the dark chrome. (The download icon
- * isn't in the sprite; it stays a thin inline SVG, added when its button is
- * registered.)
+ * Icons: each control is a standalone 30×30 hairline SVG (white 1.5px strokes),
+ * drawn as a centred ::after background over the dark chrome. PhotoSwipe 5's own
+ * filled icons — heavy glyphs wrapped in a 2px stroke "shadow" — are hidden in
+ * favour of these, which read cleanly over the black backdrop.
  */
 .pswp__button--arrow .pswp__icn,
-.pswp__button--close .pswp__icn {
+.pswp__button--close .pswp__icn,
+.pswp__button--download .pswp__icn {
 	display: none;
 }
 
-/*
- * Shared sprite window: a 30×30 box centred on the button. The 1100×367 sprite
- * is scaled to 300px wide (×3/11 ≈ 0.273), and each glyph's centre is slid to
- * the window centre with `background-position` (window-centre − glyph-centre×s).
- */
 .pswp__button--close::after,
-.pswp__button--arrow::after {
+.pswp__button--arrow::after,
+.pswp__button--download::after {
 	content: '';
 	position: absolute;
 	top: 50%;
@@ -61,18 +55,20 @@
 	width: 30px;
 	height: 30px;
 	transform: translate(-50%, -50%);
-	background-image: url(./default-skin.svg);
 	background-repeat: no-repeat;
-	background-size: 300px auto;
+	background-size: 30px 30px;
 }
 .pswp__button--close::after {
-	background-position: -10px -60px; /* × glyph, sprite centre (91.5, 274.8) */
+	background-image: url(./close.svg);
 }
 .pswp__button--arrow--prev::after {
-	background-position: -164.7px -52.1px; /* ← glyph, sprite centre (659, 246) */
+	background-image: url(./arrow-prev.svg);
 }
 .pswp__button--arrow--next::after {
-	background-position: -105.3px -52.1px; /* → glyph, sprite centre (441, 246) */
+	background-image: url(./arrow-next.svg);
+}
+.pswp__button--download::after {
+	background-image: url(./download.svg);
 }
 
 /* Faint square scrim behind the prev/next arrows — invisible on the black
