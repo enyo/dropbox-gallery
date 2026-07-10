@@ -198,6 +198,7 @@
           timer = setTimeout(() => root.classList.add("pswp--ui-idle"), 2500);
         };
         root.addEventListener("pointermove", wake);
+        root.addEventListener("click", wake);
         pswp.on("destroy", () => clearTimeout(timer));
         wake();
       });
