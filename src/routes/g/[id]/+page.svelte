@@ -258,8 +258,10 @@
 		gap: var(--gap);
 
 		&:has(.tile:hover) {
-			.tile:not(:hover) {
-				opacity: 0.8;
+			@media (pointer: fine) {
+				.tile:not(:hover) {
+					opacity: 0.8;
+				}
 			}
 		}
 	}
