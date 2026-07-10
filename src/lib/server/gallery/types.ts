@@ -10,6 +10,10 @@ export interface GalleryRef {
 	id: string;
 	shareUrl: string;
 	title: string;
+	/** Filename of the chosen cover image, or null to fall back to the first image. */
+	coverImage: string | null;
+	/** When true, the resolved cover is dropped from the grid (shown only as the hero). */
+	coverExcluded: boolean;
 }
 
 /** A folder resolved from a pasted share link, ready to be minted into a token. */
@@ -36,6 +40,12 @@ export interface GalleryImage {
 
 export interface Gallery {
 	title: string;
+	/**
+	 * The full-screen cover image: the file named by the gallery's `coverImage`, or
+	 * the first image when that is unset or missing. Null only when the gallery is
+	 * empty. May or may not also appear in `images` (see `coverExcluded`).
+	 */
+	cover: GalleryImage | null;
 	images: GalleryImage[];
 }
 

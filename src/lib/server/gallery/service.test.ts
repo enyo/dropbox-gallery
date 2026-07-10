@@ -7,7 +7,9 @@ import type { StorageProvider, StoredFile } from '../storage/types';
 const ref: GalleryRef = {
 	id: '/test/festival',
 	shareUrl: 'https://www.dropbox.com/scl/fo/x?rlkey=y&dl=0',
-	title: 'Festival'
+	title: 'Festival',
+	coverImage: null,
+	coverExcluded: false
 };
 
 function fakeStorage(
@@ -75,6 +77,43 @@ describe('StorageBackedGalleryService', () => {
 			ImageNotFoundError
 		);
 		expect(storage.getThumbnail).not.toHaveBeenCalled();
+	});
+
+	it('defaults the cover to the first image when none is chosen', async () => {
+		const storage = fakeStorage([
+			{ id: 'id:2', name: 'IMG_2.jpg', version: 'c' },
+			{ id: 'id:3', name: 'IMG_10.jpg', version: 'a' }
+		]);
+		const gallery = await new StorageBackedGalleryService(storage).loadGallery(ref);
+		expect(gallery.cover?.name).toBe('IMG_2.jpg');
+		// Not excluded, so the cover still appears in the grid.
+		expect(gallery.images.map((i) => i.name)).toEqual(['IMG_2.jpg', 'IMG_10.jpg']);
+	});
+
+	it('resolves the cover by filename and can exclude it from the grid', async () => {
+		const storage = fakeStorage([
+			{ id: 'id:2', name: 'IMG_2.jpg', version: 'c' },
+			{ id: 'id:3', name: 'IMG_10.jpg', version: 'a' }
+		]);
+		const withCover = { ...ref, coverImage: 'IMG_10.jpg', coverExcluded: true };
+		const gallery = await new StorageBackedGalleryService(storage).loadGallery(withCover);
+		expect(gallery.cover?.name).toBe('IMG_10.jpg');
+		expect(gallery.images.map((i) => i.name)).toEqual(['IMG_2.jpg']);
+	});
+
+	it('falls back to the first image when the chosen cover is gone', async () => {
+		const storage = fakeStorage([{ id: 'id:1', name: 'a.jpg', version: 'v' }]);
+		const withCover = { ...ref, coverImage: 'deleted.jpg', coverExcluded: true };
+		const gallery = await new StorageBackedGalleryService(storage).loadGallery(withCover);
+		expect(gallery.cover?.name).toBe('a.jpg');
+		// The fallback cover is still excluded from the grid.
+		expect(gallery.images).toEqual([]);
+	});
+
+	it('has a null cover for an empty gallery', async () => {
+		const gallery = await new StorageBackedGalleryService(fakeStorage([])).loadGallery(ref);
+		expect(gallery.cover).toBeNull();
+		expect(gallery.images).toEqual([]);
 	});
 
 	it('builds a download-all URL with dl=1', () => {

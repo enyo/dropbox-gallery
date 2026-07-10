@@ -34,65 +34,58 @@
 }
 
 /*
- * Hairline icons. PhotoSwipe 5's built-in icons are filled glyphs wrapped in a
- * 2px stroke "shadow", which reads heavy. Hide those and redraw the arrows and
- * close as thin glyphs with pseudo-elements. (The download icon is a thin SVG
- * supplied when its button is registered.)
+ * Icons come from the reference portfolio's `default-skin.svg` sprite (the same
+ * artwork the original lightbox used), placed with `background-position` so each
+ * button shows a single glyph. PhotoSwipe 5's own filled icons — heavy glyphs
+ * wrapped in a 2px stroke "shadow" — are hidden in favour of the sprite's white
+ * hairline artwork, which reads cleanly over the dark chrome. (The download icon
+ * isn't in the sprite; it stays a thin inline SVG, added when its button is
+ * registered.)
  */
 .pswp__button--arrow .pswp__icn,
 .pswp__button--close .pswp__icn {
 	display: none;
 }
 
-/* Faint rounded scrim behind the prev/next arrows — invisible on the black
-   letterbox, a soft disc over the photo. */
-.pswp__button--arrow::before {
-	content: '';
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 44px;
-	height: 44px;
-	background: var(--pswp-bg-element);
-	transform: translate(-50%, -50%);
-}
-
-/* Hairline chevrons: a bordered square rotated 45°. */
+/*
+ * Shared sprite window: a 30×30 box centred on the button. The 1100×367 sprite
+ * is scaled to 300px wide (×3/11 ≈ 0.273), and each glyph's centre is slid to
+ * the window centre with `background-position` (window-centre − glyph-centre×s).
+ */
+.pswp__button--close::after,
 .pswp__button--arrow::after {
 	content: '';
 	position: absolute;
 	top: 50%;
 	left: 50%;
-	width: 12px;
-	height: 12px;
-	border-style: solid;
-	border-color: #fff;
+	width: 30px;
+	height: 30px;
+	transform: translate(-50%, -50%);
+	background-image: url(./default-skin.svg);
+	background-repeat: no-repeat;
+	background-size: 300px auto;
+}
+.pswp__button--close::after {
+	background-position: -10px -60px; /* × glyph, sprite centre (91.5, 274.8) */
 }
 .pswp__button--arrow--prev::after {
-	border-width: 0 0 1.5px 1.5px; /* ‹ */
-	transform: translate(-35%, -50%) rotate(45deg);
+	background-position: -164.7px -52.1px; /* ← glyph, sprite centre (659, 246) */
 }
 .pswp__button--arrow--next::after {
-	border-width: 1.5px 1.5px 0 0; /* › */
-	transform: translate(-65%, -50%) rotate(45deg);
+	background-position: -105.3px -52.1px; /* → glyph, sprite centre (441, 246) */
 }
 
-/* Hairline close (×): two crossed 1.5px strokes. */
-.pswp__button--close::before,
-.pswp__button--close::after {
+/* Faint square scrim behind the prev/next arrows — invisible on the black
+   letterbox, a soft patch over the photo. Sits under the sprite glyph above. */
+.pswp__button--arrow::before {
 	content: '';
 	position: absolute;
 	top: 50%;
 	left: 50%;
-	width: 18px;
-	height: 1.5px;
-	background: #fff;
-}
-.pswp__button--close::before {
-	transform: translate(-50%, -50%) rotate(45deg);
-}
-.pswp__button--close::after {
-	transform: translate(-50%, -50%) rotate(-45deg);
+	width: 40px;
+	height: 38px;
+	background: var(--pswp-bg-element);
+	transform: translate(-50%, -50%);
 }
 
 /* Counter: small, dim, medium weight with a soft shadow for bright photos. */

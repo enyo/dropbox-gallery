@@ -17,6 +17,15 @@
 	const fullUrl = (img: Img) => `/g/${data.id}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
 	const originalUrl = (img: Img) => `/g/${data.id}/original/${enc(img.id)}`;
 
+	// Total photos in the gallery, counting the cover even when it's excluded from
+	// the grid — so the count and "download all" reflect the whole folder, not just
+	// what the masonry shows.
+	const total = $derived.by(() => {
+		const c = data.cover;
+		const coverInGrid = c ? data.images.some((img) => img.id === c.id) : false;
+		return data.images.length + (c && !coverInGrid ? 1 : 0);
+	});
+
 	const DEFAULT_ASPECT = 3 / 2;
 	const TARGET_COLUMN = 300; // px, matches the native-masonry minmax below
 	const GAP = 14; // keep in sync with --gap
@@ -171,20 +180,31 @@
 	<title>{data.title}</title>
 </svelte:head>
 
-<header class="bar">
-	<h1>{data.title}</h1>
-	<div class="meta">
-		<span>{data.images.length} photo{data.images.length === 1 ? '' : 's'}</span>
-		{#if data.images.length > 0}
-			<a class="download-all" href={`/g/${data.id}/download`} onclick={() => track('download_all')}
-				>Download all</a
-			>
-		{/if}
-	</div>
-</header>
+{#if data.cover}
+	<section class="cover">
+		<img class="cover-img" src={fullUrl(data.cover)} alt={data.title} fetchpriority="high" />
+		<div class="cover-scrim"></div>
+		<h1 class="cover-title">{data.title}</h1>
+	</section>
+{:else}
+	<header class="bar">
+		<h1>{data.title}</h1>
+	</header>
+{/if}
+
+<div class="toolbar">
+	<span class="count">{total} photo{total === 1 ? '' : 's'}</span>
+	{#if total > 0}
+		<a class="download-all" href={`/g/${data.id}/download`} onclick={() => track('download_all')}
+			>Download all</a
+		>
+	{/if}
+</div>
 
 {#if data.images.length === 0}
-	<p class="empty">No photos in this gallery yet.</p>
+	{#if !data.cover}
+		<p class="empty">No photos in this gallery yet.</p>
+	{/if}
 {:else}
 	<div
 		class="grid"
@@ -210,25 +230,73 @@
 {/if}
 
 <style>
+	/* Full-screen hero: the cover image fills the viewport with the title laid
+	 * boldly over it, a gradient scrim keeping the text legible on any photo. */
+	.cover {
+		position: relative;
+		width: 100%;
+		height: 100svh;
+		overflow: hidden;
+		background: var(--color-surface);
+	}
+	.cover-img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.cover-scrim {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			to bottom,
+			rgba(0, 0, 0, 0.35) 0%,
+			rgba(0, 0, 0, 0) 30%,
+			rgba(0, 0, 0, 0) 55%,
+			rgba(0, 0, 0, 0.65) 100%
+		);
+	}
+	.cover-title {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: max(6vh, 40px);
+		margin: 0;
+		padding: 0 24px;
+		text-align: center;
+		color: #fff;
+		font-weight: 700;
+		font-size: clamp(2.5rem, 8vw, 6rem);
+		line-height: 1.05;
+		letter-spacing: -0.02em;
+		text-shadow: 0 2px 24px rgba(0, 0, 0, 0.4);
+		overflow-wrap: anywhere;
+	}
+
+	/* Fallback header when the gallery has no cover (empty gallery). */
 	.bar {
 		max-width: var(--maxw);
 		margin: 0 auto;
 		padding: 28px 24px 18px;
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 10px;
 	}
-	h1 {
+	.bar h1 {
 		margin: 0;
 		font-size: 1.5rem;
-		font-weight: 600;
+		font-weight: 700;
 	}
-	.meta {
+
+	/* Toolbar directly below the cover: photo count and the "download all" action. */
+	.toolbar {
+		max-width: var(--maxw);
+		margin: 0 auto;
+		padding: 20px 24px;
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 16px;
+		justify-content: space-between;
+		gap: 12px;
 		color: var(--color-text-dim);
 		font-size: 0.95rem;
 	}

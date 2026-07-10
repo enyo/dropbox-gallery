@@ -56,10 +56,14 @@ export const getPhotos = query(galleryId, async (id): Promise<GalleryPhotos> => 
 	if (!record) error(404, 'This gallery does not exist.');
 
 	try {
+		// coverExcluded:false so the admin always sees the full, unfiltered list —
+		// it needs every photo to pick a cover from, cover included.
 		const gallery = await getGalleryService().loadGallery({
 			id: record.folderId,
 			shareUrl: record.shareUrl,
-			title: record.title
+			title: record.title,
+			coverImage: null,
+			coverExcluded: false
 		});
 		return { photos: gallery.images, photosError: false };
 	} catch (e) {

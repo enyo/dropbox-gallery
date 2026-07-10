@@ -9,6 +9,16 @@
 	const thumbUrl = (img: { id: string; version: string }) =>
 		`/admin/g/${data.gallery.id}/thumb/${enc(img.id)}?v=${img.version}`;
 
+	type Photo = { id: string; name: string; version: string };
+
+	// Resolve which photo is the cover: the one named by the stored cover, else the
+	// first photo (the viewer's fallback). `isExplicit` distinguishes a deliberate
+	// choice from that default. Call only with a non-empty photo list.
+	function resolveCover(photos: Photo[], coverName: string | null) {
+		const explicit = coverName ? photos.find((p) => p.name === coverName) : undefined;
+		return { cover: explicit ?? photos[0], isExplicit: !!explicit };
+	}
+
 	const fmtDate = (ms: number) =>
 		new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 	const toDateInput = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -93,6 +103,53 @@
 	</div>
 
 	<section class="card">
+		<h2>Cover image</h2>
+		{#await photosQuery}
+			<div class="skeleton">
+				<div class="cover-preview wrapper">
+					<div class="cover-sk"></div>
+					<div class="name-sk"></div>
+				</div>
+			</div>
+		{:then { photos, photosError }}
+			{#if photosError}
+				<p class="muted">Couldn’t load photos — the source folder may be unavailable.</p>
+			{:else if photos.length === 0}
+				<p class="muted">Add photos to the folder to choose a cover.</p>
+			{:else}
+				{@const resolved = resolveCover(photos, data.gallery.coverImage)}
+				<div class="cover-preview">
+					<img class="cover-thumb" src={thumbUrl(resolved.cover)} alt={resolved.cover.name} />
+					<div class="cover-info">
+						<span class="cover-name">{resolved.cover.name}</span>
+						<span class="muted small"
+							>{resolved.isExplicit ? 'Chosen cover' : 'Default — first image'}</span
+						>
+					</div>
+					{#if resolved.isExplicit}
+						<form method="POST" action="?/setCover" use:enhance>
+							<button class="link" type="submit">Remove</button>
+						</form>
+					{/if}
+				</div>
+				<form method="POST" action="?/setCoverExclusion" use:enhance>
+					<label class="check">
+						<input
+							type="checkbox"
+							name="excluded"
+							checked={data.gallery.coverExcluded}
+							onchange={(e) => e.currentTarget.form?.requestSubmit()}
+						/>
+						Exclude the cover from the grid below
+					</label>
+				</form>
+			{/if}
+		{:catch}
+			<p class="muted">Couldn’t load photos.</p>
+		{/await}
+	</section>
+
+	<section class="card">
 		<h2>Settings</h2>
 		<form method="POST" action="?/update" use:enhance>
 			<label for="title">Title</label>
@@ -168,6 +225,9 @@
 			{@const removedStats = photosError
 				? []
 				: activity.perImage.filter((s) => !currentNames.has(s.name))}
+			{@const coverName = photos.length
+				? resolveCover(photos, data.gallery.coverImage).cover.name
+				: null}
 			{#if photosError}
 				<p class="muted">Couldn’t load photos — the source folder may be unavailable.</p>
 			{:else if photos.length === 0 && removedStats.length === 0}
@@ -179,6 +239,14 @@
 						<li>
 							<img class="thumb" src={thumbUrl(photo)} alt={photo.name} loading="lazy" />
 							<span class="name">{photo.name}</span>
+							{#if photo.name === coverName}
+								<span class="cover-badge" title="Current cover image">Cover</span>
+							{:else}
+								<form method="POST" action="?/setCover" use:enhance>
+									<input type="hidden" name="name" value={photo.name} />
+									<button class="set-cover" type="submit">Set as cover</button>
+								</form>
+							{/if}
 							{@render metricRow(s?.zooms ?? 0, s?.downloads ?? 0)}
 						</li>
 					{/each}
@@ -472,6 +540,79 @@
 	/* Fade rows/metrics with no activity so the counts that matter stand out. */
 	.metric.zero {
 		opacity: 0.35;
+	}
+
+	/* Cover-image card: current cover preview + the exclude toggle. */
+	.cover-preview {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		margin-bottom: 6px;
+	}
+	.cover-thumb {
+		width: 104px;
+		height: 68px;
+		object-fit: cover;
+		border-radius: 8px;
+		background: var(--color-surface-2);
+		flex-shrink: 0;
+	}
+	.cover-info {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+	}
+	.cover-name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.small {
+		font-size: 0.8rem;
+		margin: 0;
+	}
+	.cover-sk {
+		width: 104px;
+		height: 68px;
+		border-radius: 8px;
+		flex-shrink: 0;
+	}
+
+	/* Per-photo cover control in the list: a badge for the current cover, else a
+	 * "set as cover" button that stays quiet until the row is hovered. */
+	.cover-badge {
+		flex-shrink: 0;
+		font-size: 0.68rem;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		color: var(--color-accent);
+		border: 1px solid var(--color-accent);
+		border-radius: 999px;
+		padding: 1px 8px;
+	}
+	.set-cover {
+		flex-shrink: 0;
+		background: none;
+		border: 1px solid var(--color-border);
+		color: var(--color-text-dim);
+		border-radius: 999px;
+		padding: 2px 10px;
+		font-size: 0.78rem;
+	}
+	.set-cover:hover {
+		color: var(--color-text);
+		border-color: var(--color-text-dim);
+	}
+	@media (pointer: fine) {
+		.photos li .set-cover {
+			opacity: 0;
+			transition: opacity 0.12s ease;
+		}
+		.photos li:hover .set-cover,
+		.photos li:focus-within .set-cover {
+			opacity: 1;
+		}
 	}
 
 	/*

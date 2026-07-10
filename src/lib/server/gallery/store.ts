@@ -20,6 +20,10 @@ export interface GalleryRecord {
 	expiresAt: number | null;
 	/** Epoch ms when revoked, or null while live. */
 	revokedAt: number | null;
+	/** Filename of the chosen cover image, or null to fall back to the first image. */
+	coverImage: string | null;
+	/** When true, the resolved cover is dropped from the grid (shown only as the hero). */
+	coverExcluded: boolean;
 }
 
 /** The raw D1 row shape (snake_case columns). */
@@ -31,6 +35,8 @@ interface GalleryRow {
 	created_at: number;
 	expires_at: number | null;
 	revoked_at: number | null;
+	cover_image: string | null;
+	cover_excluded: number;
 }
 
 /** Outcome of resolving a `/g/<id>` capability, distinguishing why access failed. */
@@ -48,7 +54,9 @@ function toRecord(row: GalleryRow): GalleryRecord {
 		title: row.title,
 		createdAt: row.created_at,
 		expiresAt: row.expires_at,
-		revokedAt: row.revoked_at
+		revokedAt: row.revoked_at,
+		coverImage: row.cover_image,
+		coverExcluded: row.cover_excluded === 1
 	};
 }
 
@@ -62,7 +70,13 @@ export function resolveRow(row: GalleryRow | null, now: number): GalleryLookup {
 	if (row.expires_at !== null && now > row.expires_at) return { status: 'expired' };
 	return {
 		status: 'ok',
-		ref: { id: row.folder_id, shareUrl: row.share_url, title: row.title }
+		ref: {
+			id: row.folder_id,
+			shareUrl: row.share_url,
+			title: row.title,
+			coverImage: row.cover_image,
+			coverExcluded: row.cover_excluded === 1
+		}
 	};
 }
 
@@ -141,6 +155,27 @@ export class GalleryStore {
 		const { meta } = await this.#db
 			.prepare(`UPDATE galleries SET title = ?, expires_at = ? WHERE id = ?`)
 			.bind(fields.title, fields.expiresAt, id)
+			.run();
+		return meta.changes > 0;
+	}
+
+	/**
+	 * Set (or clear) the cover image by filename. Pass null to clear, which makes the
+	 * gallery fall back to its first image. Returns true if the row exists.
+	 */
+	async setCover(id: string, coverImage: string | null): Promise<boolean> {
+		const { meta } = await this.#db
+			.prepare(`UPDATE galleries SET cover_image = ? WHERE id = ?`)
+			.bind(coverImage, id)
+			.run();
+		return meta.changes > 0;
+	}
+
+	/** Toggle whether the resolved cover is excluded from the grid. Returns true if the row exists. */
+	async setCoverExcluded(id: string, excluded: boolean): Promise<boolean> {
+		const { meta } = await this.#db
+			.prepare(`UPDATE galleries SET cover_excluded = ? WHERE id = ?`)
+			.bind(excluded ? 1 : 0, id)
 			.run();
 		return meta.changes > 0;
 	}

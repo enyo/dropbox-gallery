@@ -8,7 +8,9 @@ const baseRow = {
 	title: 'Festival',
 	created_at: 1000,
 	expires_at: null as number | null,
-	revoked_at: null as number | null
+	revoked_at: null as number | null,
+	cover_image: null as string | null,
+	cover_excluded: 0
 };
 
 describe('resolveRow', () => {
@@ -16,7 +18,22 @@ describe('resolveRow', () => {
 		const result = resolveRow(baseRow, 5000);
 		expect(result).toEqual({
 			status: 'ok',
-			ref: { id: 'id:folder', shareUrl: baseRow.share_url, title: 'Festival' }
+			ref: {
+				id: 'id:folder',
+				shareUrl: baseRow.share_url,
+				title: 'Festival',
+				coverImage: null,
+				coverExcluded: false
+			}
+		});
+	});
+
+	it('carries the cover choice into the ref', () => {
+		const row = { ...baseRow, cover_image: 'hero.jpg', cover_excluded: 1 };
+		const result = resolveRow(row, 5000);
+		expect(result).toMatchObject({
+			status: 'ok',
+			ref: { coverImage: 'hero.jpg', coverExcluded: true }
 		});
 	});
 

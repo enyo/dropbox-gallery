@@ -77,7 +77,13 @@ export class StorageBackedGalleryService implements GalleryService {
 	}
 
 	async loadGallery(ref: GalleryRef): Promise<Gallery> {
-		return { title: ref.title, images: await this.#galleryImages(ref) };
+		const all = await this.#galleryImages(ref);
+		// The cover is the file named by ref.coverImage, falling back to the first
+		// image when that name is unset or no longer present in the folder.
+		const cover = all.find((img) => img.name === ref.coverImage) ?? all[0] ?? null;
+		// When excluded, the cover shows only as the hero — drop it from the grid.
+		const images = ref.coverExcluded && cover ? all.filter((img) => img.id !== cover.id) : all;
+		return { title: ref.title, cover, images };
 	}
 
 	async #assertMember(ref: GalleryRef, imageId: string): Promise<void> {

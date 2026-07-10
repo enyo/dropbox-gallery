@@ -30,6 +30,8 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
 			createdAt: record.createdAt,
 			expiresAt: record.expiresAt,
 			revokedAt: record.revokedAt,
+			coverImage: record.coverImage,
+			coverExcluded: record.coverExcluded,
 			status: statusOf(record)
 		}
 	};
@@ -61,6 +63,28 @@ export const actions: Actions = {
 		if (!ok) return fail(404, { error: 'This gallery does not exist.' });
 		// `use:enhance` invalidates and re-runs `load`, so the page reflects the change.
 		return { saved: true };
+	},
+
+	// Set the cover image by filename, or clear it (empty `name`) to fall back to
+	// the first image. The name comes from the live Dropbox listing rendered on the
+	// page, so it is trusted only as a label — a stale name simply falls back.
+	setCover: async ({ request, params, locals, platform }) => {
+		if (!locals.isAdmin) return fail(401, { error: 'Not authenticated.' });
+		const data = await request.formData();
+		const name = String(data.get('name') ?? '').trim();
+		const ok = await getGalleryStore(platform).setCover(params.id, name || null);
+		if (!ok) return fail(404, { error: 'This gallery does not exist.' });
+		return { coverSaved: true };
+	},
+
+	// Toggle whether the resolved cover is dropped from the grid (hero-only).
+	setCoverExclusion: async ({ request, params, locals, platform }) => {
+		if (!locals.isAdmin) return fail(401, { error: 'Not authenticated.' });
+		const data = await request.formData();
+		const excluded = data.get('excluded') != null;
+		const ok = await getGalleryStore(platform).setCoverExcluded(params.id, excluded);
+		if (!ok) return fail(404, { error: 'This gallery does not exist.' });
+		return { coverSaved: true };
 	},
 
 	delete: async ({ params, locals, platform }) => {

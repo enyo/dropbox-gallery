@@ -18,7 +18,14 @@ export const GET: RequestHandler = async ({ params, locals, platform }) => {
 
 	try {
 		const thumb = await getGalleryService().getThumbnail(
-			{ id: record.folderId, shareUrl: record.shareUrl, title: record.title },
+			// Cover fields are irrelevant here: getThumbnail keys off the raw listing.
+			{
+				id: record.folderId,
+				shareUrl: record.shareUrl,
+				title: record.title,
+				coverImage: null,
+				coverExcluded: false
+			},
 			params.image,
 			'grid'
 		);
