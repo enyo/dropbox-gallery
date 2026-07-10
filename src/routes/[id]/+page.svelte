@@ -85,9 +85,7 @@
     const [width, height] = fitFull(ar);
     return { url: `${data.origin}${fullUrl(c)}`, width, height };
   });
-  const shareDescription = $derived(
-    total > 0 ? `${total} photo${total === 1 ? "" : "s"}` : "",
-  );
+  const shareDescription = "Hannah Mayr – Fotografie und Grafikdesign Wien";
 
   /**
    * Fire-and-forget engagement beacon (opens, downloads). Uses `sendBeacon` so it
