@@ -1,0 +1,104 @@
+/*
+ * Lightbox (PhotoSwipe v5) styling, kept in a plain .css file so the rules stay
+ * global: PhotoSwipe renders its UI outside the Svelte component, so scoped
+ * component styles would never reach it. Tuned to the minimal-dark look of the
+ * reference portfolio lightbox — solid-black backdrop, hairline icons, and dim
+ * chrome sitting over a faint dark scrim.
+ */
+
+.pswp {
+	--pswp-bg: #000;
+}
+
+/* Very subtle dark scrim behind the top bar so the counter/close read over
+   bright photos without a hard edge. */
+.pswp__top-bar {
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
+}
+
+/* Dim every control to ~75%, full on hover — the reference's quiet chrome. */
+.pswp__button {
+	opacity: 0.75;
+	transition: opacity 0.2s ease;
+}
+.pswp__button:hover,
+.pswp__button:focus-visible {
+	opacity: 1;
+}
+
+/* Minimal chrome: no zoom button (pinch / double-click still zoom). The
+   two-class selector outranks PhotoSwipe's own `.pswp--zoom-allowed` show rule. */
+.pswp .pswp__button--zoom {
+	display: none;
+}
+
+/*
+ * Hairline icons. PhotoSwipe 5's built-in icons are filled glyphs wrapped in a
+ * 2px stroke "shadow", which reads heavy. Hide those and redraw the arrows and
+ * close as thin glyphs with pseudo-elements. (The download icon is a thin SVG
+ * supplied when its button is registered.)
+ */
+.pswp__button--arrow .pswp__icn,
+.pswp__button--close .pswp__icn {
+	display: none;
+}
+
+/* Faint rounded scrim behind the prev/next arrows — invisible on the black
+   letterbox, a soft disc over the photo. */
+.pswp__button--arrow::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.3);
+	transform: translate(-50%, -50%);
+}
+
+/* Hairline chevrons: a bordered square rotated 45°. */
+.pswp__button--arrow::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 12px;
+	height: 12px;
+	border-style: solid;
+	border-color: #fff;
+}
+.pswp__button--arrow--prev::after {
+	border-width: 0 0 1.5px 1.5px; /* ‹ */
+	transform: translate(-35%, -50%) rotate(45deg);
+}
+.pswp__button--arrow--next::after {
+	border-width: 1.5px 1.5px 0 0; /* › */
+	transform: translate(-65%, -50%) rotate(45deg);
+}
+
+/* Hairline close (×): two crossed 1.5px strokes. */
+.pswp__button--close::before,
+.pswp__button--close::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 18px;
+	height: 1.5px;
+	background: #fff;
+}
+.pswp__button--close::before {
+	transform: translate(-50%, -50%) rotate(45deg);
+}
+.pswp__button--close::after {
+	transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Counter: small, dim, medium weight with a soft shadow for bright photos. */
+.pswp__counter {
+	opacity: 0.75;
+	font-size: 13px;
+	font-weight: 500;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import 'photoswipe/style.css';
+	import './lightbox.css';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -120,6 +121,8 @@
 			lb = new PhotoSwipeLightbox({
 				dataSource: items,
 				bgOpacity: 1, // full black backdrop, not semitransparent
+				// Vertical breathing room so photos never tuck under the top bar.
+				padding: { top: 72, bottom: 72, left: 0, right: 0 },
 				pswpModule: () => import('photoswipe')
 			});
 			lb.on('uiRegister', () => {
@@ -129,13 +132,8 @@
 					order: 8,
 					isButton: true,
 					tagName: 'a',
-					// Custom SVG so it sizes/aligns exactly like the built-in toolbar icons.
-					html: {
-						isCustomSVG: true,
-						inner:
-							'<path d="M20.5 14.3 17.1 17.7 17.1 10 14.9 10 14.9 17.7 11.5 14.3 10 15.8 16 21.8 22 15.8z M23 23H9v2h14z" id="pswp__icn-download" />',
-						outlineID: 'pswp__icn-download'
-					},
+					// Thin line icon matching the hairline arrows/close (see lightbox.css).
+					html: '<svg class="pswp__icn" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true"><path d="M16 7v13M10.5 15.5 16 21l5.5-5.5M8.5 24h15" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 					onInit: (el: HTMLAnchorElement) => {
 						el.setAttribute('download', '');
 						el.setAttribute('target', '_blank');
