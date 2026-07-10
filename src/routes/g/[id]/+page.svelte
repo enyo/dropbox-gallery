@@ -306,13 +306,12 @@
 
 	/* Toolbar directly below the cover: photo count and the "download all" action. */
 	.toolbar {
-		max-width: var(--maxw);
 		margin: 0 auto;
-		padding: 20px 24px;
+		padding: 40px var(--gap);
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: center;
 		gap: 12px;
 		color: var(--color-text-dim);
 		font-size: 0.95rem;
@@ -334,21 +333,20 @@
 	 * only when native support is absent.
 	 */
 	.grid {
-		max-width: var(--maxw);
-		margin: 0 auto;
-		padding: 0 24px 60px;
+		margin: 0 var(--gap) 240px;
+		padding: 0 0 60px;
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 		grid-template-rows: masonry;
 		gap: var(--gap);
 
-		&:has(.tile:hover) {
+		/* &:has(.tile:hover) {
 			@media (pointer: fine) {
 				.tile:not(:hover) {
 					opacity: 0.8;
 				}
 			}
-		}
+		} */
 	}
 	@supports (display: masonry) {
 		.grid:not(.js) {
