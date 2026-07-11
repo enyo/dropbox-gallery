@@ -321,7 +321,7 @@
 
 <style>
 	.wrap {
-		max-width: 720px;
+		max-width: 960px;
 		margin: 6vh auto 0;
 		padding: 0 24px 80px;
 	}
@@ -573,8 +573,8 @@
 		background: var(--color-surface);
 	}
 	.thumb {
-		width: 48px;
-		height: 48px;
+		width: 80px;
+		height: 80px;
 		object-fit: cover;
 		border-radius: 6px;
 		background: var(--color-surface-2);
@@ -728,8 +728,8 @@
 		border-radius: 8px;
 	}
 	.thumb-sk {
-		width: 48px;
-		height: 48px;
+		width: 80px;
+		height: 80px;
 		border-radius: 6px;
 		flex-shrink: 0;
 	}
