@@ -1,7 +1,6 @@
 import { DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN } from "$app/env/private";
 import type { ThumbSize, ThumbResult, ResolvedFolder, ImageDimensions } from "../gallery/types";
 import type { StorageProvider, StoredFile } from "./types";
-import { createLimiter, createCoalescer } from "./concurrency";
 
 const RPC = "https://api.dropboxapi.com/2";
 const CONTENT = "https://content.dropboxapi.com/2";
@@ -9,23 +8,20 @@ const CONTENT = "https://content.dropboxapi.com/2";
 const THUMB_SIZE: Record<ThumbSize, string> = { grid: "w640h480", full: "w2048h1536" };
 
 /**
- * Dropbox rate-limits per app-user and is tightest on *concurrency*, which is
- * exactly the shape of a cold gallery: every tile in the viewport asks for its
- * thumbnail at once. Keep our own fan-out under that ceiling rather than
- * discovering it as 429s. The budget is shared across every endpoint because
- * Dropbox counts them against the same limit.
+ * Dropbox rate-limits per app-user, tightest on concurrency: a cold gallery asks
+ * for every tile in the viewport at once and some of those come back throttled.
+ * We cannot throttle *ourselves* across requests — a Worker isolate has no safe
+ * shared queue (see the note on the token cache below) — so we absorb 429s here
+ * instead of preventing them, and let the caller fail soft if that is not enough.
+ *
+ * Attempts per call, including the first — so two retries after a 429/5xx.
  */
-const MAX_CONCURRENT_CALLS = 8;
-/** Attempts per call, including the first — so two retries after a 429/5xx. */
 const MAX_ATTEMPTS = 3;
 /**
  * Longest we will hold a visitor's request open waiting out a `Retry-After`.
  * Beyond this, failing fast and letting the client come back beats stalling.
  */
 const MAX_RETRY_WAIT_MS = 8_000;
-
-const limit = createLimiter(MAX_CONCURRENT_CALLS);
-const coalesceThumb = createCoalescer<ThumbResult>();
 
 export class DropboxApiError extends Error {
   constructor(
@@ -62,14 +58,14 @@ function retryDelayMs(res: Response, attempt: number): number {
 }
 
 /**
- * One Dropbox call, inside the shared concurrency budget and retried when
- * Dropbox throttles (429) or fails transiently (5xx). A 429 that outlives our
- * attempts surfaces as a `DropboxApiError` with `isRateLimited`, which callers
- * turn into a retryable response rather than a hard failure.
+ * One Dropbox call, retried when Dropbox throttles (429) or fails transiently
+ * (5xx). A 429 that outlives our attempts surfaces as a `DropboxApiError` with
+ * `isRateLimited`, which callers turn into a retryable response rather than a
+ * hard failure.
  */
 async function call(endpoint: string, url: string, init: RequestInit): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
-    const res = await limit(() => fetch(url, init));
+    const res = await fetch(url, init);
     if (res.ok) return res;
     // 4xx other than 429 is our bug or a missing file: no point re-asking.
     if (res.status !== 429 && res.status < 500) {
@@ -111,24 +107,25 @@ interface FileMetadataWithMedia {
   };
 }
 
-/** In-memory access token, refreshed from the long-lived refresh token as needed. */
+/**
+ * In-memory access token, refreshed from the long-lived refresh token as needed.
+ *
+ * Only the *value* is shared between requests, never the in-flight refresh. A
+ * Worker isolate serves many requests concurrently but gives each its own I/O
+ * context, so a promise awaiting another request's `fetch` can never resolve
+ * once that request ends — the runtime spots the stall and kills the Worker
+ * ("your Worker's code had hung"). Sharing one refresh across a cold isolate's
+ * first burst therefore hangs every request but the one that started it. Minting
+ * a few redundant tokens is the cheap, correct trade.
+ */
 let cachedToken: { value: string; expiresAt: number } | null = null;
-/** The refresh in progress, if any, so a cold isolate mints one token, not one per request. */
-let refreshing: Promise<string> | null = null;
 
 async function getAccessToken(): Promise<string> {
   if (!DROPBOX_REFRESH_TOKEN) {
     throw new Error("Dropbox not configured: set DROPBOX_REFRESH_TOKEN.");
   }
   if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
-  refreshing ??= refreshAccessToken().finally(() => (refreshing = null));
-  return refreshing;
-}
 
-async function refreshAccessToken(): Promise<string> {
-  // Deliberately outside the concurrency limiter: every limited call awaits a
-  // token first, so taking a slot to fetch one would deadlock once the budget
-  // is full. It is a single coalesced call, so it costs the limiter nothing.
   const res = await fetch(`https://api.dropboxapi.com/oauth2/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -185,26 +182,21 @@ export class DropboxStorageProvider implements StorageProvider {
       .map((e) => ({ id: e.id, name: e.name, version: e.content_hash ?? e.rev ?? e.id }));
   }
 
-  getThumbnail(fileId: string, size: ThumbSize): Promise<ThumbResult> {
-    // A freshly shared gallery has every visitor asking for the same thumbnails
-    // at the same moment, and each CDN PoP misses its cache independently. Fold
-    // those onto one Dropbox call instead of one per visitor.
-    return coalesceThumb(`${size}:${fileId}`, async () => {
-      const token = await getAccessToken();
-      const res = await call("get_thumbnail_v2", `${CONTENT}/files/get_thumbnail_v2`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Dropbox-API-Arg": JSON.stringify({
-            resource: { ".tag": "path", path: fileId },
-            format: { ".tag": "jpeg" },
-            size: { ".tag": THUMB_SIZE[size] },
-            mode: { ".tag": "bestfit" },
-          }),
-        },
-      });
-      return { body: new Uint8Array(await res.arrayBuffer()), contentType: "image/jpeg" };
+  async getThumbnail(fileId: string, size: ThumbSize): Promise<ThumbResult> {
+    const token = await getAccessToken();
+    const res = await call("get_thumbnail_v2", `${CONTENT}/files/get_thumbnail_v2`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Dropbox-API-Arg": JSON.stringify({
+          resource: { ".tag": "path", path: fileId },
+          format: { ".tag": "jpeg" },
+          size: { ".tag": THUMB_SIZE[size] },
+          mode: { ".tag": "bestfit" },
+        }),
+      },
     });
+    return { body: new Uint8Array(await res.arrayBuffer()), contentType: "image/jpeg" };
   }
 
   async getOriginalUrl(fileId: string): Promise<string> {

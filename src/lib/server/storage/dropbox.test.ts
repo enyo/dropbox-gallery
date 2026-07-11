@@ -110,7 +110,11 @@ describe("getThumbnail", () => {
     expect(thumbnailCalls()).toBe(1);
   });
 
-  it("folds concurrent requests for the same thumbnail onto one Dropbox call", async () => {
+  it("serves concurrent requests independently, sharing no promise between them", async () => {
+    // Workers give each request its own I/O context: a promise awaiting another
+    // request's fetch never resolves once that request ends, and the runtime
+    // kills the Worker as hung. So concurrent callers must not be folded onto a
+    // shared in-flight call, however tempting the saved Dropbox call looks.
     script(jpeg(), jpeg());
 
     const both = await Promise.all([
@@ -118,18 +122,7 @@ describe("getThumbnail", () => {
       provider.getThumbnail("/a.jpg", "grid"),
     ]);
 
-    expect(both[0]).toBe(both[1]);
-    expect(thumbnailCalls()).toBe(1);
-  });
-
-  it("keeps the two sizes of one image apart", async () => {
-    script(jpeg(), jpeg());
-
-    await Promise.all([
-      provider.getThumbnail("/a.jpg", "grid"),
-      provider.getThumbnail("/a.jpg", "full"),
-    ]);
-
+    expect(both[0]).not.toBe(both[1]);
     expect(thumbnailCalls()).toBe(2);
   });
 });
