@@ -13,6 +13,7 @@ import { getRequestEvent, query } from "$app/server";
 import type { GallerySummary } from "$lib/server/gallery/events";
 import { getEventStore } from "$lib/server/gallery/events";
 import { getGalleryService } from "$lib/server/gallery/service";
+import { getDimensionCache } from "$lib/server/gallery/dimensions";
 import { getGalleryStore } from "$lib/server/gallery/store";
 import type { GalleryImage } from "$lib/server/gallery/types";
 import { DropboxApiError } from "$lib/server/storage/dropbox";
@@ -49,13 +50,16 @@ export const getPhotos = query(GalleryIdSchema, async (id): Promise<GalleryPhoto
   try {
     // coverExcluded:false so the admin always sees the full, unfiltered list —
     // it needs every photo to pick a cover from, cover included.
-    const gallery = await getGalleryService().loadGallery({
-      id: record.folderId,
-      shareUrl: record.shareUrl,
-      title: record.title,
-      coverImage: null,
-      coverExcluded: false,
-    });
+    const gallery = await getGalleryService().loadGallery(
+      {
+        id: record.folderId,
+        shareUrl: record.shareUrl,
+        title: record.title,
+        coverImage: null,
+        coverExcluded: false,
+      },
+      getDimensionCache(platform),
+    );
     return { photos: gallery.images, photosError: false };
   } catch (e) {
     if (!(e instanceof DropboxApiError && e.isNotFound)) {

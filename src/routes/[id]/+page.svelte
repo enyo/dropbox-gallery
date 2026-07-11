@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import "photoswipe/style.css";
   import "./lightbox.css";
   import downloadIcon from "./download.svg";
@@ -57,13 +58,31 @@
   const PHONE_GRID = 560 - 2 * GAP;
   const PHONE_COLUMNS = 2;
 
-  // Aspect ratio per image, known up front from server EXIF (no image load needed).
-  const tiles = $derived(
-    data.images.map((img) => ({
-      img,
-      ar: img.width && img.height ? img.width / img.height : DEFAULT_ASPECT,
-    })),
-  );
+  /**
+   * Aspect ratios recovered from the thumbnails, for photos the server could not
+   * measure. Keyed by image id.
+   *
+   * The server measures photos once and remembers them, so this is normally empty —
+   * but a gallery whose cache is still filling would otherwise lay those photos out
+   * at DEFAULT_ASPECT, which boxes a portrait photo into a landscape tile and, worse,
+   * makes the lightbox stretch it. A Dropbox thumbnail is best-fit, so it carries the
+   * original's ratio: once one loads, we know the truth and can correct.
+   */
+  let measured = $state<Record<string, number>>({});
+
+  function aspectOf(img: Img): number {
+    if (img.width && img.height) return img.width / img.height;
+    return measured[img.id] ?? DEFAULT_ASPECT;
+  }
+
+  function measureFrom(img: Img, el: HTMLImageElement) {
+    if (img.width && img.height) return; // server already knew
+    if (measured[img.id] || !el.naturalWidth || !el.naturalHeight) return;
+    measured = { ...measured, [img.id]: el.naturalWidth / el.naturalHeight };
+  }
+
+  // Aspect ratio per image — from the server where known, else from the thumbnail.
+  const tiles = $derived(data.images.map((img) => ({ img, ar: aspectOf(img) })));
 
   /** Fit an aspect ratio into the 2048×1536 thumbnail bounds (the lightbox image size). */
   function fitFull(aspect: number): [number, number] {
@@ -74,7 +93,9 @@
       : [Math.round(maxH * aspect), maxH];
   }
 
-  // PhotoSwipe data source — dimensions known up front, falls back to 3:2.
+  // PhotoSwipe data source. The dimensions here are what the lightbox sizes a photo
+  // to, so a wrong ratio here is a visibly stretched photo — they follow `tiles`,
+  // corrections included.
   type Item = {
     src: string;
     msrc: string;
@@ -191,11 +212,36 @@
         "photoswipe/lightbox"
       );
       lb = new PhotoSwipeLightbox({
-        dataSource: items,
+        // Read untracked: `items` changes whenever a thumbnail load recovers an aspect
+        // ratio, and depending on it here would destroy and rebuild the lightbox each
+        // time — even with a photo open. Slides pick up those corrections through the
+        // `itemData` filter below instead.
+        dataSource: untrack(() => items),
         bgOpacity: 1, // full black backdrop, not semitransparent
         // Vertical breathing room so photos never tuck under the top bar.
         padding: { top: 72, bottom: 72, left: 0, right: 0 },
         pswpModule: () => import("photoswipe"),
+      });
+      // Every slide, and every neighbour PhotoSwipe preloads, takes its data from here,
+      // so a ratio recovered after the lightbox was built still reaches it.
+      lb.addFilter("itemData", (itemData: Item, index: number) => items[index] ?? itemData);
+      // Last resort, for a photo that was never measured server-side and whose grid
+      // thumbnail never loaded either (the visitor arrowed straight to it): the full
+      // image has now decoded, so believe it over our guess and re-lay the slide out.
+      // Without this the slide keeps the guessed ratio and renders the photo stretched.
+      lb.on("loadComplete", ({ slide, content }: any) => {
+        const el: HTMLImageElement | undefined = content?.element;
+        if (!el?.naturalWidth || !el.naturalHeight) return;
+        const ar = el.naturalWidth / el.naturalHeight;
+
+        const img = data.images[slide.index];
+        if (img) measureFrom(img, el); // also fixes the tile behind the lightbox
+        if (Math.abs(slide.width / slide.height - ar) < 0.01) return;
+
+        [slide.width, slide.height] = fitFull(ar);
+        content.width = slide.width;
+        content.height = slide.height;
+        slide.resize();
       });
       lb.on("uiRegister", () => {
         lb.pswp.ui.registerElement({
@@ -340,6 +386,7 @@
             src={gridUrl(img)}
             alt={img.name}
             loading="lazy"
+            onload={(e) => measureFrom(img, e.currentTarget as HTMLImageElement)}
             onerror={retryThumb}
           />
         </button>

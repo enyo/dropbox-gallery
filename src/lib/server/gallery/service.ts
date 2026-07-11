@@ -11,11 +11,23 @@ import { ImageNotFoundError } from "./types";
 import type { StorageProvider, StoredFile } from "../storage/types";
 import { DropboxStorageProvider } from "../storage/dropbox";
 import { isThumbnailableImage, byNaturalName } from "../storage/images";
+import { noDimensionCache, type DimensionCache, type MeasuredImage } from "./dimensions";
 
 /** Short cache to coalesce repeated work (page render + thumbnail requests). */
 const LISTING_TTL_MS = 60_000;
 /** Max concurrent metadata calls when resolving image dimensions. */
 const DIMENSION_CONCURRENCY = 8;
+/**
+ * How many photos one render may measure from Dropbox.
+ *
+ * An unmeasured photo costs one external subrequest, and a Worker invocation only gets
+ * 50 of those on the Free plan. Exceeding the budget is not a soft failure: every
+ * further `fetch` in the invocation throws, so the entire tail of a big gallery would
+ * come back with no dimensions at once. We stay well clear of the ceiling and let the
+ * `DimensionCache` fill over successive renders instead — each one measures another
+ * batch, and once a gallery is fully measured it needs no metadata calls at all.
+ */
+const MEASURE_BUDGET = 40;
 
 /** Run `fn` over `items` with a bounded number of concurrent calls, preserving order. */
 async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -56,28 +68,63 @@ export class StorageBackedGalleryService implements GalleryService {
     return files;
   }
 
-  async #galleryImages(ref: GalleryRef): Promise<GalleryImage[]> {
+  async #galleryImages(ref: GalleryRef, dimensions: DimensionCache): Promise<GalleryImage[]> {
     const cached = this.#galleries.get(ref.id);
     if (cached && Date.now() < cached.expiresAt) return cached.images;
 
     const files = await this.#imageFiles(ref);
-    // Per-image metadata gives original dimensions so the grid can reserve space (no CLS).
-    const dimensions = await mapPool(files, DIMENSION_CONCURRENCY, (f) =>
-      this.#storage.getImageDimensions(f.id).catch(() => null),
-    );
-    const images: GalleryImage[] = files.map((f, i) => ({
+    // Original dimensions let the grid reserve each tile's space up front (no CLS) and
+    // let the lightbox open a photo at its true aspect ratio. Almost always a cache read.
+    const known = await dimensions.read(files);
+
+    const unmeasured = files.filter((f) => !known.has(f.id)).slice(0, MEASURE_BUDGET);
+    const measured = await mapPool(unmeasured, DIMENSION_CONCURRENCY, async (f) => {
+      try {
+        return await this.#storage.getImageDimensions(f.id);
+      } catch (e) {
+        // Swallowing this silently is what let the bug hide: a photo with no dimensions
+        // is laid out at a default aspect ratio, which looks like a styling problem
+        // rather than a failed call.
+        console.error(`Failed to measure ${f.name}`, e);
+        return null;
+      }
+    });
+
+    const fresh: MeasuredImage[] = [];
+    unmeasured.forEach((f, i) => {
+      const dims = measured[i];
+      if (!dims) return;
+      known.set(f.id, dims);
+      fresh.push({ id: f.id, version: f.version, ...dims });
+    });
+    await dimensions.write(fresh).catch((e) => console.error("Failed to store dimensions", e));
+
+    const images: GalleryImage[] = files.map((f) => ({
       id: f.id,
       name: f.name,
       version: f.version,
-      width: dimensions[i]?.width,
-      height: dimensions[i]?.height,
+      width: known.get(f.id)?.width,
+      height: known.get(f.id)?.height,
     }));
-    this.#galleries.set(ref.id, { images, expiresAt: Date.now() + LISTING_TTL_MS });
+
+    // Only hold a gallery no further render could improve on. Caching a half-measured
+    // one would pin it — and the guessed aspect ratios in it — for the whole TTL, so a
+    // gallery bigger than the budget would take TTL × (photos ÷ budget) to come good.
+    // "No progress" also settles the case of a photo Dropbox will never measure (some
+    // files carry no media info at all), which would otherwise be retried forever.
+    const complete = known.size === files.length;
+    const madeProgress = fresh.length > 0;
+    if (complete || !madeProgress) {
+      this.#galleries.set(ref.id, { images, expiresAt: Date.now() + LISTING_TTL_MS });
+    }
     return images;
   }
 
-  async loadGallery(ref: GalleryRef): Promise<Gallery> {
-    const all = await this.#galleryImages(ref);
+  async loadGallery(
+    ref: GalleryRef,
+    dimensions: DimensionCache = noDimensionCache,
+  ): Promise<Gallery> {
+    const all = await this.#galleryImages(ref, dimensions);
     // The cover is the file named by ref.coverImage, falling back to the first
     // image when that name is unset or no longer present in the folder.
     const cover = all.find((img) => img.name === ref.coverImage) ?? all[0] ?? null;

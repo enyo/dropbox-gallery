@@ -2,6 +2,7 @@
  * The gallery domain, with no knowledge of any specific storage backend.
  * Routes depend only on this module; Dropbox lives behind a StorageProvider.
  */
+import type { DimensionCache } from "./dimensions";
 
 export type ThumbSize = "grid" | "full";
 
@@ -60,7 +61,12 @@ export interface ThumbResult {
  */
 export interface GalleryService {
   resolveFolder(shareUrl: string): Promise<ResolvedFolder>;
-  loadGallery(ref: GalleryRef): Promise<Gallery>;
+  /**
+   * `dimensions` is where measured image sizes are kept between renders. Without one,
+   * every render re-measures every photo against the storage backend — which a Worker
+   * invocation cannot afford (see `DimensionCache`).
+   */
+  loadGallery(ref: GalleryRef, dimensions?: DimensionCache): Promise<Gallery>;
   getThumbnail(ref: GalleryRef, imageId: string, size: ThumbSize): Promise<ThumbResult>;
   getOriginalUrl(ref: GalleryRef, imageId: string): Promise<string>;
   getDownloadAllUrl(ref: GalleryRef): string;

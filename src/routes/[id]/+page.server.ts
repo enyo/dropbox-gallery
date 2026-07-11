@@ -2,6 +2,7 @@ import { error, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { getGalleryStore, galleryPath } from "$lib/server/gallery/store";
 import { getGalleryService } from "$lib/server/gallery/service";
+import { getDimensionCache } from "$lib/server/gallery/dimensions";
 import { DropboxApiError } from "$lib/server/storage/dropbox";
 
 export const load: PageServerLoad = async ({ params, url, platform, setHeaders }) => {
@@ -22,7 +23,7 @@ export const load: PageServerLoad = async ({ params, url, platform, setHeaders }
 
   let gallery;
   try {
-    gallery = await getGalleryService().loadGallery(lookup.ref);
+    gallery = await getGalleryService().loadGallery(lookup.ref, getDimensionCache(platform));
   } catch (e) {
     if (e instanceof DropboxApiError && e.isNotFound) {
       throw error(404, "The source folder for this gallery is no longer available.");
