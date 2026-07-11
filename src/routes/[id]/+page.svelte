@@ -32,6 +32,10 @@
   const DEFAULT_ASPECT = 3 / 2;
   const TARGET_COLUMN = 300; // px, matches the native-masonry minmax below
   const GAP = 14; // keep in sync with --gap
+  // Phone widths fit a 300px column only once, so they're pinned to two columns
+  // instead. Grid width at the 560px breakpoint below, less its side margins.
+  const PHONE_GRID = 560 - 2 * GAP;
+  const PHONE_COLUMNS = 2;
 
   // Aspect ratio per image, known up front from server EXIF (no image load needed).
   const tiles = $derived(
@@ -126,10 +130,10 @@
       height: 0,
     };
     if (!polyfill || !gridWidth) return empty;
-    const columns = Math.max(
-      1,
-      Math.floor((gridWidth + GAP) / (TARGET_COLUMN + GAP)),
-    );
+    const columns =
+      gridWidth <= PHONE_GRID
+        ? PHONE_COLUMNS
+        : Math.max(1, Math.floor((gridWidth + GAP) / (TARGET_COLUMN + GAP)));
     const colWidth = (gridWidth - (columns - 1) * GAP) / columns;
     const colHeights = new Array(columns).fill(0);
     const positions = tiles.map(({ ar }) => {
@@ -432,6 +436,12 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     grid-template-rows: masonry;
     gap: var(--gap);
+  }
+  /* Keep the breakpoint in sync with PHONE_GRID. */
+  @media (max-width: 560px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
   @supports (display: masonry) {
     .grid:not(.js) {
