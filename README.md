@@ -100,6 +100,3 @@ pnpm db:migrate         # apply to the remote D1 (production; needs `wrangler lo
 
 Admin credentials are not env vars — they live in the D1 `users` table; seed them with
 `pnpm admin:create --remote`.
-
-`DROPBOX_ACCESS_TOKEN` is optional (a short-lived token for local testing before a
-refresh token exists); leave it unset in production.

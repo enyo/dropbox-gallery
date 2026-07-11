@@ -9,27 +9,18 @@
  * remote call SvelteKit rewrites `event.url` to the invoking page's path
  * (`/admin/g/<id>`), so `hooks.server.ts` reads the admin session as usual.
  */
-import { query, getRequestEvent } from "$app/server";
-import { error } from "@sveltejs/kit";
-import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { getGalleryStore } from "$lib/server/gallery/store";
-import { getGalleryService } from "$lib/server/gallery/service";
-import { getEventStore } from "$lib/server/gallery/events";
-import type { GalleryImage } from "$lib/server/gallery/types";
+import { getRequestEvent, query } from "$app/server";
 import type { GallerySummary } from "$lib/server/gallery/events";
+import { getEventStore } from "$lib/server/gallery/events";
+import { getGalleryService } from "$lib/server/gallery/service";
+import { getGalleryStore } from "$lib/server/gallery/store";
+import type { GalleryImage } from "$lib/server/gallery/types";
 import { DropboxApiError } from "$lib/server/storage/dropbox";
+import { error } from "@sveltejs/kit";
+import z from "zod";
 
 /** Standard Schema accepting a non-empty gallery id (the `/<id>` capability). */
-const galleryId: StandardSchemaV1<string, string> = {
-  "~standard": {
-    version: 1,
-    vendor: "dropbox-gallery",
-    validate: (value) =>
-      typeof value === "string" && value.length > 0
-        ? { value }
-        : { issues: [{ message: "A gallery id is required." }] },
-  },
-};
+const GalleryIdSchema = z.string().min(1, "Gallery id must be non-empty")
 
 /** Require an authenticated admin, returning the request's platform bindings. */
 function requireAdmin() {
@@ -49,7 +40,7 @@ export interface GalleryPhotos {
  * empty list with `photosError`, so the admin controls stay usable even when the
  * source folder has gone away — matching the page's prior behaviour.
  */
-export const getPhotos = query(galleryId, async (id): Promise<GalleryPhotos> => {
+export const getPhotos = query(GalleryIdSchema, async (id): Promise<GalleryPhotos> => {
   const platform = requireAdmin();
 
   const record = await getGalleryStore(platform).get(id);
@@ -75,7 +66,7 @@ export const getPhotos = query(galleryId, async (id): Promise<GalleryPhotos> => 
 });
 
 /** Aggregated viewer engagement (views, downloads, download-all) for the gallery. */
-export const getActivity = query(galleryId, async (id): Promise<GallerySummary> => {
+export const getActivity = query(GalleryIdSchema, async (id): Promise<GallerySummary> => {
   const platform = requireAdmin();
   return getEventStore(platform).summarize(id);
 });

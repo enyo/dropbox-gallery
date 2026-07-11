@@ -2,7 +2,6 @@ import {
   DROPBOX_APP_KEY,
   DROPBOX_APP_SECRET,
   DROPBOX_REFRESH_TOKEN,
-  DROPBOX_ACCESS_TOKEN,
 } from "$app/env/private";
 import type { ThumbSize, ThumbResult, ResolvedFolder, ImageDimensions } from "../gallery/types";
 import type { StorageProvider, StoredFile } from "./types";
@@ -60,10 +59,8 @@ let cachedToken: { value: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
   if (!DROPBOX_REFRESH_TOKEN) {
-    // Fallback for local testing before a refresh token is captured.
-    if (DROPBOX_ACCESS_TOKEN) return DROPBOX_ACCESS_TOKEN;
     throw new Error(
-      "Dropbox not configured: set DROPBOX_REFRESH_TOKEN (or DROPBOX_ACCESS_TOKEN for local testing).",
+      "Dropbox not configured: set DROPBOX_REFRESH_TOKEN.",
     );
   }
   if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
