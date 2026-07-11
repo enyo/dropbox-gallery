@@ -151,6 +151,15 @@
 
   let lightbox: { loadAndOpen: (i: number) => void } | null = $state(null);
 
+  // Grid tiles, indexed the same as `items`/`tiles`, so the lightbox can keep the
+  // background scrolled to whatever photo is on screen (see the `change` handler).
+  let tileEls = $state<HTMLElement[]>([]);
+
+  // PhotoSwipe fires `change` once on open, for the photo just clicked. That tile
+  // is already in view, so we swallow that first event and only sync the
+  // background on actual swipes/arrows within the lightbox.
+  let skipNextLightboxChange = false;
+
   $effect(() => {
     let lb: any;
     (async () => {
@@ -201,6 +210,20 @@
         root.addEventListener("click", wake);
         pswp.on("destroy", () => clearTimeout(timer));
         wake();
+      });
+      // Keep the (hidden) grid behind the lightbox scrolled to the photo being
+      // viewed, so closing the lightbox leaves that photo in front of the user.
+      // Fires on open and on every swipe/arrow change; `currIndex` matches the
+      // tile index since `items` and `tiles` share an order.
+      lb.on("change", () => {
+        if (skipNextLightboxChange) {
+          skipNextLightboxChange = false;
+          return;
+        }
+        tileEls[lb.pswp.currIndex]?.scrollIntoView({
+          block: "center",
+          behavior: "instant" as ScrollBehavior,
+        });
       });
       lb.init();
       lightbox = lb;
@@ -276,12 +299,13 @@
     style={polyfill ? `height:${layout.height}px` : ""}
   >
     {#each tiles as { img, ar }, i (img.id)}
-      <div class="tile" style={tileStyle(i, ar)}>
+      <div class="tile" style={tileStyle(i, ar)} bind:this={tileEls[i]}>
         <button
           class="tile-open"
           type="button"
           onclick={() => {
             track("zoom", img.name);
+            skipNextLightboxChange = true;
             lightbox?.loadAndOpen(i);
           }}
           aria-label={`Open ${img.name}`}
