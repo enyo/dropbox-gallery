@@ -29,6 +29,7 @@ export default defineConfig({
       },
     }),
   ],
+  server: { port: 5197 },
   test: {
     expect: { requireAssertions: true },
     projects: [

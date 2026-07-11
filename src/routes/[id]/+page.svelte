@@ -187,8 +187,9 @@
   $effect(() => {
     let lb: any;
     (async () => {
-      const { default: PhotoSwipeLightbox } =
-        await import("photoswipe/lightbox");
+      const { default: PhotoSwipeLightbox } = await import(
+        "photoswipe/lightbox"
+      );
       lb = new PhotoSwipeLightbox({
         dataSource: items,
         bgOpacity: 1, // full black backdrop, not semitransparent
@@ -335,7 +336,12 @@
           }}
           aria-label={`Open ${img.name}`}
         >
-          <img src={gridUrl(img)} alt={img.name} loading="lazy" onerror={retryThumb} />
+          <img
+            src={gridUrl(img)}
+            alt={img.name}
+            loading="lazy"
+            onerror={retryThumb}
+          />
         </button>
         <!-- Download the original without opening the lightbox; same beacon the
 				     lightbox download fires. Sits above the open button, so a click here
