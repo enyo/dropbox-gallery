@@ -20,6 +20,26 @@
     `/${data.id}/thumb/${enc(img.id)}?size=full&v=${img.version}`;
   const originalUrl = (img: Img) => `/${data.id}/original/${enc(img.id)}`;
 
+  /** Attempts to reload a thumbnail after Dropbox throttled us, and the delay before each. */
+  const THUMB_RETRY_DELAYS_MS = [1500, 5000];
+
+  /**
+   * When Dropbox throttles a cold gallery the thumb route answers 503, and a
+   * failed <img> never re-requests on its own — the tile would just stay broken.
+   * Ask again a couple of times, on a fresh URL so the browser cannot serve us
+   * its own cached failure. Gives up quietly afterwards.
+   */
+  function retryThumb(event: Event) {
+    const el = event.currentTarget as HTMLImageElement;
+    const attempt = Number(el.dataset.retry ?? 0);
+    if (attempt >= THUMB_RETRY_DELAYS_MS.length) return;
+
+    el.dataset.retry = String(attempt + 1);
+    const url = new URL(el.src, location.href);
+    url.searchParams.set("retry", String(attempt + 1));
+    setTimeout(() => (el.src = url.toString()), THUMB_RETRY_DELAYS_MS[attempt]);
+  }
+
   // Total photos in the gallery, counting the cover even when it's excluded from
   // the grid — so the count and "download all" reflect the whole folder, not just
   // what the masonry shows.
@@ -270,6 +290,7 @@
       src={fullUrl(data.cover)}
       alt={data.title}
       fetchpriority="high"
+      onerror={retryThumb}
     />
     <div class="cover-scrim"></div>
     <h1 class="cover-title">{data.title}</h1>
@@ -314,7 +335,7 @@
           }}
           aria-label={`Open ${img.name}`}
         >
-          <img src={gridUrl(img)} alt={img.name} loading="lazy" />
+          <img src={gridUrl(img)} alt={img.name} loading="lazy" onerror={retryThumb} />
         </button>
         <!-- Download the original without opening the lightbox; same beacon the
 				     lightbox download fires. Sits above the open button, so a click here

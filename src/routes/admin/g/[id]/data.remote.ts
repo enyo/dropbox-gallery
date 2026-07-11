@@ -20,7 +20,7 @@ import { error } from "@sveltejs/kit";
 import z from "zod";
 
 /** Standard Schema accepting a non-empty gallery id (the `/<id>` capability). */
-const GalleryIdSchema = z.string().min(1, "Gallery id must be non-empty")
+const GalleryIdSchema = z.string().min(1, "Gallery id must be non-empty");
 
 /** Require an authenticated admin, returning the request's platform bindings. */
 function requireAdmin() {

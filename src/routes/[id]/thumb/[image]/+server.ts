@@ -1,8 +1,7 @@
 import type { RequestHandler } from "./$types";
 import { getGalleryStore } from "$lib/server/gallery/store";
 import { getGalleryService } from "$lib/server/gallery/service";
-import { ImageNotFoundError } from "$lib/server/gallery/types";
-import { DropboxApiError } from "$lib/server/storage/dropbox";
+import { thumbErrorResponse } from "$lib/server/thumb-response";
 
 export const GET: RequestHandler = async ({ params, url, platform }) => {
   const { lookup } = await getGalleryStore(platform).resolveByPath(params.id);
@@ -19,9 +18,8 @@ export const GET: RequestHandler = async ({ params, url, platform }) => {
       },
     });
   } catch (e) {
-    if (e instanceof ImageNotFoundError || (e instanceof DropboxApiError && e.isNotFound)) {
-      return new Response("Not found", { status: 404 });
-    }
+    const failure = thumbErrorResponse(e);
+    if (failure) return failure;
     throw e;
   }
 };
