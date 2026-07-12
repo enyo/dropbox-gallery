@@ -82,7 +82,9 @@
   }
 
   // Aspect ratio per image — from the server where known, else from the thumbnail.
-  const tiles = $derived(data.images.map((img) => ({ img, ar: aspectOf(img) })));
+  const tiles = $derived(
+    data.images.map((img) => ({ img, ar: aspectOf(img) })),
+  );
 
   /** Fit an aspect ratio into the 2048×1536 thumbnail bounds (the lightbox image size). */
   function fitFull(aspect: number): [number, number] {
@@ -229,7 +231,10 @@
       });
       // Every slide, and every neighbour PhotoSwipe preloads, takes its data from here,
       // so a ratio recovered after the lightbox was built still reaches it.
-      lb.addFilter("itemData", (itemData: Item, index: number) => items[index] ?? itemData);
+      lb.addFilter(
+        "itemData",
+        (itemData: Item, index: number) => items[index] ?? itemData,
+      );
       // Last resort, for a photo that was never measured server-side and whose grid
       // thumbnail never loaded either (the visitor arrowed straight to it): the full
       // image has now decoded, so believe it over our guess and re-lay the slide out.
@@ -296,14 +301,16 @@
       // Fires on open and on every swipe/arrow change; `currIndex` matches the
       // tile index since `items` and `tiles` share an order.
       lb.on("change", () => {
-        if (skipNextLightboxChange) {
-          skipNextLightboxChange = false;
-          return;
-        }
-        tileEls[lb.pswp.currIndex]?.scrollIntoView({
-          block: "center",
-          behavior: "instant" as ScrollBehavior,
-        });
+        // Disabled scrolling for now, because it might cause issues on Android.
+        return;
+        // if (skipNextLightboxChange) {
+        //   skipNextLightboxChange = false;
+        //   return;
+        // }
+        // tileEls[lb.pswp.currIndex]?.scrollIntoView({
+        //   block: "center",
+        //   behavior: "instant" as ScrollBehavior,
+        // });
       });
       lb.init();
       lightbox = lb;
@@ -395,7 +402,8 @@
             src={gridUrl(img)}
             alt={img.name}
             loading="lazy"
-            onload={(e) => measureFrom(img, e.currentTarget as HTMLImageElement)}
+            onload={(e) =>
+              measureFrom(img, e.currentTarget as HTMLImageElement)}
             onerror={retryThumb}
           />
         </button>
