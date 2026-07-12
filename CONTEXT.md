@@ -27,11 +27,8 @@ An unguessable capability URL (`/<id>`, at the site root) that grants a **Viewer
 _Avoid_: share link (collides with Dropbox's own "shared link" feature)
 
 **Slug**:
-An optional, human-readable name for a **Gallery Link** (`/<hash>-<slug>`, e.g. `/04213-summer-2026`), chosen by the **Admin**. The `<hash>` is a five-digit **Slug Hash** of the gallery id, prefixing the slug so it can't be reached by guessing the name alone. A convenience over the `<id>`, not a replacement: the **id always wins** when _resolving_ a URL, though once a gallery has a slug the page redirects even the id to the active slug's `/<hash>-<slug>`. A gallery can hold many slugs — setting a new one keeps the old ones alive, and the newest (**active**) slug is where the id and every stale slug redirect, so renaming a link never breaks the ones already shared. Slugs are globally unique; a slug no longer active for its gallery may be claimed by another, but an **active** slug can never be taken. See [ADR-0008](docs/adr/0008-gallery-slugs.md) and [ADR-0009](docs/adr/0009-root-urls-and-slug-hash.md).
+An optional, human-readable name for a **Gallery Link** (`/<slug>`, e.g. `/summer-2026`), chosen by the **Admin**. A convenience over the `<id>`, not a replacement: the **id always wins** when _resolving_ a URL, though once a gallery has a slug the page redirects even the id to the active slug's `/<slug>`. A slug is guessable by design — it is a short, public name, not a capability, so a gallery that has one is only as private as its name is obscure; the `/<id>` link is the one that carries the real access guarantee. A gallery can hold many slugs — setting a new one keeps the old ones alive, and the newest (**active**) slug is where the id and every stale slug redirect, so renaming a link never breaks the ones already shared. Slugs are globally unique; a slug no longer active for its gallery may be claimed by another, but an **active** slug can never be taken. See [ADR-0008](docs/adr/0008-gallery-slugs.md) and [ADR-0009](docs/adr/0009-root-urls.md).
 _Avoid_: alias (unspecific), vanity URL
-
-**Slug Hash**:
-A short, deterministic five-digit decimal code derived from the gallery `<id>`, prefixing a slug in the public URL (`/<hash>-<slug>`). Deliberately weak — an obstacle to casual slug guessing and scraping, not a capability; the `<id>` remains the real secret. Reaching a slug requires its correct hash, which is a function of the unguessable id. See [ADR-0009](docs/adr/0009-root-urls-and-slug-hash.md).
 
 ## Relationships
 

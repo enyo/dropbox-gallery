@@ -1,6 +1,6 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
-import { getGalleryStore, galleryPath, slugHash } from "$lib/server/gallery/store";
+import { getGalleryStore, galleryPath } from "$lib/server/gallery/store";
 import type { GalleryRecord } from "$lib/server/gallery/store";
 import { getEventStore } from "$lib/server/gallery/events";
 
@@ -33,9 +33,6 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
       id: record.id,
       title: record.title,
       url: `${url.origin}${galleryPath(record.id, activeSlug)}`,
-      // The slug's URL prefix (`<hash>-`), shown before the slug input so the operator
-      // sees the real link shape. Constant per gallery — it derives from the id alone.
-      hash: slugHash(record.id),
       createdAt: record.createdAt,
       expiresAt: record.expiresAt,
       revokedAt: record.revokedAt,

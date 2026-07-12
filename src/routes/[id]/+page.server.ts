@@ -12,8 +12,8 @@ export const load: PageServerLoad = async ({ params, url, platform, setHeaders }
   if (lookup.status === "revoked") throw error(410, "This gallery link has been revoked.");
   if (lookup.status === "not-found") throw error(404, "This gallery link is not valid.");
 
-  // Every gallery settles on one canonical URL: `/<hash>-<slug>` once it has an active
-  // slug, otherwise the bare `/<id>`. Whoever arrived on the id, or on a stale slug, is
+  // Every gallery settles on one canonical URL: `/<slug>` once it has an active slug,
+  // otherwise the bare `/<id>`. Whoever arrived on the id, or on a stale slug, is
   // redirected there; only the canonical URL itself renders in place. The id still wins
   // at resolution time — it just isn't always the URL the gallery settles on.
   if (galleryId) {

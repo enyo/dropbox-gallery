@@ -109,7 +109,7 @@
 		</p>
 		<form method="POST" action="?/setSlug" use:enhance>
 			<div class="slug-row">
-				<span class="slug-prefix">/{data.gallery.hash}-</span>
+				<span class="slug-prefix">/</span>
 				<input
 					name="slug"
 					type="text"
@@ -373,7 +373,7 @@
 		white-space: nowrap;
 	}
 
-	/* Link-slug card: a `/<hash>-` prefix, the slug input, and its save button on one row,
+	/* Link-slug card: a `/` prefix, the slug input, and its save button on one row,
 	   with the active slug and any older (redirecting) slugs listed below. */
 	.slug-row {
 		display: flex;

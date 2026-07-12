@@ -96,47 +96,12 @@ export function isValidSlug(slug: string): boolean {
 }
 
 /**
- * A short, deterministic decimal code derived from a gallery id. It prefixes a slug in the
- * public URL (`/<hash>-<slug>`) so a slug can't be reached by guessing the name alone: the
- * five digits are a function of the unguessable id, so you must already hold (or brute a
- * ~100k space against) the id to construct a working slug URL. It is deliberately weak —
- * an obstacle to casual guessing and scraping, not a capability. The id remains the real
- * secret. FNV-1a folded to five digits; not collision-free, and that's fine (a collision
- * would only let one gallery's slug URL also resolve another's — both are still the
- * owner's own galleries, and the slug table's global uniqueness is unaffected).
- */
-export function slugHash(id: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return String((h >>> 0) % 100000).padStart(5, "0");
-}
-
-/** Matches a public `<hash>-<slug>` segment: five digits, a hyphen, then the slug. */
-const SLUG_PATH_RE = /^(\d{5})-(.+)$/;
-
-/**
- * Split a public `<hash>-<slug>` path segment into its parts, or null when it isn't that
- * shape. The slug takes the whole remainder so it may itself contain hyphens
- * (`04213-summer-2026` → hash `04213`, slug `summer-2026`). The hash is not checked
- * against any gallery here — {@link GalleryStore.resolveByPath} does that.
- */
-export function parseSlugPath(segment: string): { hash: string; slug: string } | null {
-  const m = SLUG_PATH_RE.exec(segment);
-  if (!m) return null;
-  const [, hash, slug] = m;
-  return isValidSlug(slug) ? { hash, slug } : null;
-}
-
-/**
- * The canonical public path a gallery settles on: `/<hash>-<slug>` when it has an active
- * slug, otherwise the bare `/<id>`. The single place the public URL shape is built, shared
- * by the page's canonical redirect and every admin-facing link.
+ * The canonical public path a gallery settles on: `/<slug>` when it has an active slug,
+ * otherwise the bare `/<id>`. The single place the public URL shape is built, shared by the
+ * page's canonical redirect and every admin-facing link.
  */
 export function galleryPath(galleryId: string, activeSlug: string | null): string {
-  return activeSlug ? `/${slugHash(galleryId)}-${activeSlug}` : `/${galleryId}`;
+  return activeSlug ? `/${activeSlug}` : `/${galleryId}`;
 }
 
 /**
@@ -238,26 +203,20 @@ export class GalleryStore {
 
   /**
    * Resolve a public path segment to a gallery. Two forms resolve, and the id always
-   * wins: the bare capability id (`/<id>`), used directly on a match; and a hash-prefixed
-   * slug (`/<hash>-<slug>`), tried only when no gallery has that id. A slug's five-digit
-   * prefix must equal its gallery's {@link slugHash}, so a slug can't be reached by
-   * guessing the name alone — a bare slug, or one carrying the wrong hash, is a 404.
-   * Any known slug resolves here — active or stale — so assets and beacons keep working
-   * even on an old slug; the page route is what redirects a stale slug to the active one.
+   * wins: the bare capability id (`/<id>`), used directly on a match; and a slug
+   * (`/<slug>`), tried only when no gallery has that id. Any known slug resolves here —
+   * active or stale — so assets and beacons keep working even on an old slug; the page
+   * route is what redirects a stale slug to the active one.
    */
   async resolveByPath(segment: string, now = Date.now()): Promise<PathLookup> {
     const byId = await this.#rowById(segment);
     if (byId) return { lookup: resolveRow(byId, now), galleryId: byId.id };
 
-    const parsed = parseSlugPath(segment);
-    if (!parsed) return { lookup: { status: "not-found" }, galleryId: null };
+    // A segment that can't be a slug can't name a gallery either — no need to hit D1.
+    if (!isValidSlug(segment)) return { lookup: { status: "not-found" }, galleryId: null };
 
-    const slug = await this.#slugRow(parsed.slug);
+    const slug = await this.#slugRow(segment);
     if (!slug) return { lookup: { status: "not-found" }, galleryId: null };
-    // The prefix must be this slug's gallery's hash, else the slug is treated as unknown.
-    if (slugHash(slug.gallery_id) !== parsed.hash) {
-      return { lookup: { status: "not-found" }, galleryId: null };
-    }
     const row = await this.#rowById(slug.gallery_id);
     if (!row) return { lookup: { status: "not-found" }, galleryId: null }; // dangling slug
     return { lookup: resolveRow(row, now), galleryId: row.id };
