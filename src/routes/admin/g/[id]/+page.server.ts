@@ -38,6 +38,7 @@ export const load: PageServerLoad = async ({ params, locals, platform, url }) =>
       revokedAt: record.revokedAt,
       coverImage: record.coverImage,
       coverExcluded: record.coverExcluded,
+      downloadsEnabled: record.downloadsEnabled,
       status: statusOf(record),
       activeSlug,
       slugs,
@@ -52,6 +53,9 @@ export const actions: Actions = {
     const title = String(data.get("title") ?? "").trim();
     const never = data.get("never") != null;
     const date = String(data.get("expires") ?? "").trim();
+    // An unchecked box posts nothing, so absence means "downloads off". The form always
+    // renders the box, so a submission can always be read as the admin's intent.
+    const downloadsEnabled = data.get("downloads") != null;
 
     if (!title) return fail(400, { error: "Title cannot be empty." });
 
@@ -67,7 +71,11 @@ export const actions: Actions = {
       expiresAt = parsed;
     }
 
-    const ok = await getGalleryStore(platform).update(params.id, { title, expiresAt });
+    const ok = await getGalleryStore(platform).update(params.id, {
+      title,
+      expiresAt,
+      downloadsEnabled,
+    });
     if (!ok) return fail(404, { error: "This gallery does not exist." });
     // `use:enhance` invalidates and re-runs `load`, so the page reflects the change.
     return { saved: true };

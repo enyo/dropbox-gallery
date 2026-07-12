@@ -200,6 +200,21 @@
 				</label>
 			</div>
 
+			<label for="downloads">Downloads</label>
+			<label class="check">
+				<input
+					id="downloads"
+					type="checkbox"
+					name="downloads"
+					checked={data.gallery.downloadsEnabled}
+				/>
+				Viewers may download photos
+			</label>
+			<p class="muted note">
+				When off, the gallery shows no “Download all”, no download button on a thumbnail, and none
+				in the lightbox — and the originals stop being served. Viewers can still see every photo.
+			</p>
+
 			{#if form?.error}<p class="error">{form.error}</p>{/if}
 			{#if form?.saved}<p class="ok">Saved.</p>{/if}
 			<button class="primary" type="submit">Save changes</button>
@@ -469,6 +484,11 @@
 	}
 	.check input {
 		width: auto;
+	}
+	/* Explanatory line under a checkbox, indented to sit under its label text. */
+	.note {
+		margin: 0 0 0 22px;
+		font-size: 0.85rem;
 	}
 	button.primary {
 		align-self: flex-start;

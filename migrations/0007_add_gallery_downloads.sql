@@ -1,0 +1,12 @@
+-- Per-gallery download switch. When `downloads_enabled` is 0 the Viewer is offered no
+-- way to take the photos away: "download all", the per-thumbnail download button, and
+-- the lightbox's download button all disappear, and the `/<id>/download` and
+-- `/<id>/original/<image>` routes stop answering (404). Hiding the buttons alone would
+-- leave the originals a URL guess away, so the routes enforce it too.
+--
+-- This is a courtesy setting, not DRM: a Viewer can still see every photo, and the
+-- lightbox necessarily serves a large (2048px) thumbnail that any browser can save.
+-- It removes the invitation to download, not the possibility.
+--
+-- Defaults to 1, so every gallery — existing rows included — keeps allowing downloads.
+ALTER TABLE galleries ADD COLUMN downloads_enabled INTEGER NOT NULL DEFAULT 1;

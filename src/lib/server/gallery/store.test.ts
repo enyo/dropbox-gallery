@@ -18,6 +18,7 @@ const baseRow = {
   revoked_at: null as number | null,
   cover_image: null as string | null,
   cover_excluded: 0,
+  downloads_enabled: 1,
 };
 
 describe("resolveRow", () => {
@@ -32,6 +33,7 @@ describe("resolveRow", () => {
         coverImage: null,
         coverExcluded: false,
       },
+      downloadsEnabled: true,
     });
   });
 
@@ -41,6 +43,15 @@ describe("resolveRow", () => {
     expect(result).toMatchObject({
       status: "ok",
       ref: { coverImage: "hero.jpg", coverExcluded: true },
+    });
+  });
+
+  // The download routes gate on this, so a wrong value here would either leak the
+  // originals of a no-downloads gallery or break downloads on a normal one.
+  it("reports downloads as disabled when the column is 0", () => {
+    expect(resolveRow({ ...baseRow, downloads_enabled: 0 }, 5000)).toMatchObject({
+      status: "ok",
+      downloadsEnabled: false,
     });
   });
 

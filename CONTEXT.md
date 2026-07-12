@@ -22,6 +22,10 @@ The displayed collection of images from one **Source Folder**.
 **Source Folder**:
 The Dropbox folder, in the single connected account, whose images a **Gallery** displays.
 
+**Downloads**:
+Whether a **Gallery** invites a **Viewer** to take its photos away — "download all", the download button on a thumbnail, and the one in the lightbox. Set per gallery by the **Admin**, and **on by default**. Turned off, none of the three appear and the originals stop being served (the `/<id>/download` and `/<id>/original/<image>` routes 404), so the buttons cannot simply be routed around. It is a courtesy setting, not DRM: a **Viewer** still sees every photo, and the lightbox necessarily serves a large thumbnail any browser can save. It removes the invitation, not the possibility.
+_Avoid_: private gallery, protected gallery (both suggest access control — that is what expiry and revocation do)
+
 **Gallery Link**:
 An unguessable capability URL (`/<id>`, at the site root) that grants a **Viewer** access to exactly one **Gallery**. Possession is access — there is no viewer login or viewer password. The `<id>` is a random, opaque key into a persisted gallery record; it carries no readable data. Carries an optional expiry, set by the **Admin** at mint time (default 90 days, may be null for never), and can be **individually revoked** by the **Admin** at any time. Expiry and revocation are the containment mechanisms (both take effect once the edge cache lapses, not instantly). A gallery may also be reached through one or more **Slugs**.
 _Avoid_: share link (collides with Dropbox's own "shared link" feature)

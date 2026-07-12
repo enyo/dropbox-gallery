@@ -206,6 +206,11 @@
   let skipNextLightboxChange = false;
 
   $effect(() => {
+    // Read synchronously, before the first await: reads inside the async body below
+    // aren't tracked, so this is what makes the effect re-run — rebuilding the lightbox
+    // with or without its download button — when a client-side navigation lands on a
+    // gallery whose download policy differs.
+    const downloadsEnabled = data.downloadsEnabled;
     let lb: any;
     (async () => {
       const { default: PhotoSwipeLightbox } = await import(
@@ -243,29 +248,33 @@
         content.height = slide.height;
         slide.resize();
       });
-      lb.on("uiRegister", () => {
-        lb.pswp.ui.registerElement({
-          name: "download",
-          ariaLabel: "Download original",
-          order: 8,
-          isButton: true,
-          tagName: "a",
-          // Icon is drawn from download.svg as a CSS background, matching the
-          // hairline arrows/close (see lightbox.css).
-          html: "",
-          onInit: (el: HTMLAnchorElement) => {
-            el.setAttribute("download", "");
-            el.setAttribute("target", "_blank");
-            el.setAttribute("rel", "noreferrer");
-            lb.pswp.on("change", () => {
-              el.href = items[lb.pswp.currIndex].origUrl;
-            });
-            el.addEventListener("click", () =>
-              track("download", items[lb.pswp.currIndex]?.name),
-            );
-          },
+      // Downloads off: the button is never registered, so the lightbox chrome is just
+      // the arrows and close — no disabled-looking control to explain.
+      if (downloadsEnabled) {
+        lb.on("uiRegister", () => {
+          lb.pswp.ui.registerElement({
+            name: "download",
+            ariaLabel: "Download original",
+            order: 8,
+            isButton: true,
+            tagName: "a",
+            // Icon is drawn from download.svg as a CSS background, matching the
+            // hairline arrows/close (see lightbox.css).
+            html: "",
+            onInit: (el: HTMLAnchorElement) => {
+              el.setAttribute("download", "");
+              el.setAttribute("target", "_blank");
+              el.setAttribute("rel", "noreferrer");
+              lb.pswp.on("change", () => {
+                el.href = items[lb.pswp.currIndex].origUrl;
+              });
+              el.addEventListener("click", () =>
+                track("download", items[lb.pswp.currIndex]?.name),
+              );
+            },
+          });
         });
-      });
+      }
       // Fade the chrome out after a couple of idle seconds; any pointer
       // movement wakes it back up. Mirrors the reference lightbox.
       lb.on("afterInit", () => {
@@ -350,7 +359,7 @@
 
 <div class="toolbar">
   <span class="count">{total} photo{total === 1 ? "" : "s"}</span>
-  {#if total > 0}
+  {#if data.downloadsEnabled && total > 0}
     <a
       class="download-all"
       href={`/${data.id}/download`}
@@ -393,17 +402,19 @@
         <!-- Download the original without opening the lightbox; same beacon the
 				     lightbox download fires. Sits above the open button, so a click here
 				     never zooms. -->
-        <a
-          class="tile-download"
-          href={originalUrl(img)}
-          download
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`Download ${img.name}`}
-          onclick={() => track("download", img.name)}
-        >
-          <img src={downloadIcon} alt="" />
-        </a>
+        {#if data.downloadsEnabled}
+          <a
+            class="tile-download"
+            href={originalUrl(img)}
+            download
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Download ${img.name}`}
+            onclick={() => track("download", img.name)}
+          >
+            <img src={downloadIcon} alt="" />
+          </a>
+        {/if}
       </div>
     {/each}
   </div>

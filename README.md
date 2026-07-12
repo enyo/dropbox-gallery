@@ -18,6 +18,10 @@ edge caching).
   ([ADR-0009](docs/adr/0009-root-urls.md)).
 - **Viewers** open the link and browse. Thumbnails are Dropbox's native thumbnails,
   proxied and edge-cached; originals and "download all" redirect straight to Dropbox.
+- **Downloads can be turned off per gallery** (Settings, on the admin gallery page). The
+  gallery then offers no "download all", no download button on a thumbnail and none in the
+  lightbox, and the originals stop being served — viewers can still see every photo. On by
+  default.
 - The Admin can **list and revoke** minted galleries from `/admin`. Revocation and expiry
   both take effect once the edge cache lapses (~10 min), not instantly.
 - Storage is behind a `GalleryService` abstraction (no Dropbox concept), and persistence

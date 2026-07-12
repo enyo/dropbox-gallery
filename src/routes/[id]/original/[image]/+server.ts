@@ -7,6 +7,11 @@ import { DropboxApiError } from "$lib/server/storage/dropbox";
 export const GET: RequestHandler = async ({ params, platform }) => {
   const { lookup } = await getGalleryStore(platform).resolveByPath(params.id);
   if (lookup.status !== "ok") return new Response("Not found", { status: 404 });
+  // Originals are only ever reached through a download affordance, so a gallery with
+  // downloads off has no use for this route — and leaving it open would hand back the
+  // full-resolution file to anyone who guessed the URL. The lightbox is unaffected: it
+  // renders from `/<id>/thumb`, never from here.
+  if (!lookup.downloadsEnabled) return new Response("Not found", { status: 404 });
 
   try {
     const link = await getGalleryService().getOriginalUrl(lookup.ref, params.image);

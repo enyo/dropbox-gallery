@@ -24,6 +24,8 @@ export interface GalleryRecord {
   coverImage: string | null;
   /** When true, the resolved cover is dropped from the grid (shown only as the hero). */
   coverExcluded: boolean;
+  /** When false, the gallery offers a viewer no downloads at all. */
+  downloadsEnabled: boolean;
 }
 
 /** The raw D1 row shape (snake_case columns). */
@@ -37,11 +39,19 @@ interface GalleryRow {
   revoked_at: number | null;
   cover_image: string | null;
   cover_excluded: number;
+  downloads_enabled: number;
 }
 
-/** Outcome of resolving a `/<id>` capability, distinguishing why access failed. */
+/**
+ * Outcome of resolving a `/<id>` capability, distinguishing why access failed.
+ *
+ * `downloadsEnabled` rides on the successful lookup rather than on the `GalleryRef`
+ * because it governs what the link permits — like expiry and revocation — and not how
+ * the gallery is rendered from its folder. The download routes therefore learn it from
+ * the same resolve they already do, without the gallery service having to know about it.
+ */
 export type GalleryLookup =
-  | { status: "ok"; ref: GalleryRef }
+  | { status: "ok"; ref: GalleryRef; downloadsEnabled: boolean }
   | { status: "expired" }
   | { status: "revoked" }
   | { status: "not-found" };
@@ -136,6 +146,7 @@ function toRecord(row: GalleryRow): GalleryRecord {
     revokedAt: row.revoked_at,
     coverImage: row.cover_image,
     coverExcluded: row.cover_excluded === 1,
+    downloadsEnabled: row.downloads_enabled === 1,
   };
 }
 
@@ -156,6 +167,7 @@ export function resolveRow(row: GalleryRow | null, now: number): GalleryLookup {
       coverImage: row.cover_image,
       coverExcluded: row.cover_excluded === 1,
     },
+    downloadsEnabled: row.downloads_enabled === 1,
   };
 }
 
@@ -326,11 +338,17 @@ export class GalleryStore {
     return meta.changes > 0;
   }
 
-  /** Update a gallery's editable fields (title and expiry). Returns true if the row exists. */
-  async update(id: string, fields: { title: string; expiresAt: number | null }): Promise<boolean> {
+  /**
+   * Update a gallery's editable settings (title, expiry, and whether viewers may
+   * download). Returns true if the row exists.
+   */
+  async update(
+    id: string,
+    fields: { title: string; expiresAt: number | null; downloadsEnabled: boolean },
+  ): Promise<boolean> {
     const { meta } = await this.#db
-      .prepare(`UPDATE galleries SET title = ?, expires_at = ? WHERE id = ?`)
-      .bind(fields.title, fields.expiresAt, id)
+      .prepare(`UPDATE galleries SET title = ?, expires_at = ?, downloads_enabled = ? WHERE id = ?`)
+      .bind(fields.title, fields.expiresAt, fields.downloadsEnabled ? 1 : 0, id)
       .run();
     return meta.changes > 0;
   }

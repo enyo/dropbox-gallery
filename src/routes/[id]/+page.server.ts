@@ -44,5 +44,8 @@ export const load: PageServerLoad = async ({ params, url, platform, setHeaders }
     title: gallery.title,
     cover: gallery.cover,
     images: gallery.images,
+    // Drives whether the page offers any download affordance at all. The download
+    // routes check this themselves, so the page never has to be trusted for it.
+    downloadsEnabled: lookup.downloadsEnabled,
   };
 };
