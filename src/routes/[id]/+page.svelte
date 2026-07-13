@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { MediaQuery } from "svelte/reactivity";
   import { replaceState } from "$app/navigation";
   import "photoswipe/style.css";
   import "./lightbox.css";
@@ -179,15 +180,7 @@
    * *wider* than the narrowest desktop one (561 - 2*14 = 533px), so there is no
    * width threshold that separates them.
    */
-  let phone = $state(false);
-
-  $effect(() => {
-    const mq = window.matchMedia(`(max-width: ${PHONE_MAX}px)`);
-    const sync = () => (phone = mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  });
+  const phone = new MediaQuery(`max-width: ${PHONE_MAX}px`);
 
   // Shortest-column placement => the first row fills left→right, then packs vertically.
   const layout = $derived.by(() => {
@@ -196,8 +189,8 @@
       height: 0,
     };
     if (!polyfill || !gridWidth) return empty;
-    const gap = phone ? PHONE_GAP : GAP;
-    const columns = phone
+    const gap = phone.current ? PHONE_GAP : GAP;
+    const columns = phone.current
       ? PHONE_COLUMNS
       : Math.max(1, Math.floor((gridWidth + gap) / (TARGET_COLUMN + gap)));
     const colWidth = (gridWidth - (columns - 1) * gap) / columns;
