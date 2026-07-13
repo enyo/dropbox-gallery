@@ -58,7 +58,7 @@
   // Phone widths fit a 300px column only once, so they're pinned to two columns
   // instead, and the gutter halves — two columns leave each photo small, and a full
   // gutter eats width the photos want. Keep in sync with the media query below.
-  const PHONE_MAX = 560; // px viewport, the breakpoint
+  const PHONE_MAX = 642; // px viewport, the breakpoint
   const PHONE_COLUMNS = 2;
   const PHONE_GAP = GAP / 2;
 
@@ -174,11 +174,6 @@
    * Whether the phone layout is in force — asked of the same breakpoint the style
    * block below uses, so the polyfill can never disagree with the CSS about which
    * layout the page is in.
-   *
-   * The grid's own width can't answer this any more, now that the side margins
-   * shrink on a phone along with the gutter: a phone grid (560 - 2*7 = 546px) is
-   * *wider* than the narrowest desktop one (561 - 2*14 = 533px), so there is no
-   * width threshold that separates them.
    */
   const phone = new MediaQuery(`max-width: ${PHONE_MAX}px`);
 
@@ -602,7 +597,7 @@
     gap: var(--tile-gap);
   }
   /* Keep in sync with PHONE_MAX, PHONE_COLUMNS and PHONE_GAP. */
-  @media (max-width: 560px) {
+  @media (max-width: 642px) {
     .grid {
       --tile-gap: calc(var(--gap) / 2);
 
