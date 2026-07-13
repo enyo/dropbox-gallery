@@ -301,16 +301,14 @@
       // Fires on open and on every swipe/arrow change; `currIndex` matches the
       // tile index since `items` and `tiles` share an order.
       lb.on("change", () => {
-        // Disabled scrolling for now, because it might cause issues on Android.
-        return;
-        // if (skipNextLightboxChange) {
-        //   skipNextLightboxChange = false;
-        //   return;
-        // }
-        // tileEls[lb.pswp.currIndex]?.scrollIntoView({
-        //   block: "center",
-        //   behavior: "instant" as ScrollBehavior,
-        // });
+        if (skipNextLightboxChange) {
+          skipNextLightboxChange = false;
+          return;
+        }
+        tileEls[lb.pswp.currIndex]?.scrollIntoView({
+          block: "center",
+          behavior: "instant" as ScrollBehavior,
+        });
       });
       lb.init();
       lightbox = lb;
