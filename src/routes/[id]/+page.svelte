@@ -55,13 +55,11 @@
   const TARGET_COLUMN = 300; // px, matches the native-masonry minmax below
   const GAP = 14; // keep in sync with --gap
   // Phone widths fit a 300px column only once, so they're pinned to two columns
-  // instead. Grid width at the 560px breakpoint below, less its side margins —
-  // which stay at GAP on every width, so this threshold stays a fixed number.
-  const PHONE_GRID = 560 - 2 * GAP;
+  // instead, and the gutter halves — two columns leave each photo small, and a full
+  // gutter eats width the photos want. Keep in sync with the media query below.
+  const PHONE_MAX = 560; // px viewport, the breakpoint
   const PHONE_COLUMNS = 2;
-  // Two columns on a phone leave each photo small, and a full gutter between them
-  // eats width the photos want. Keep in sync with --tile-gap in the media query.
-  const PHONE_TILE_GAP = GAP / 2;
+  const PHONE_GAP = GAP / 2;
 
   /**
    * Aspect ratios recovered from the thumbnails, for photos the server could not
@@ -171,6 +169,26 @@
     polyfill = !supportsNative;
   });
 
+  /*
+   * Whether the phone layout is in force — asked of the same breakpoint the style
+   * block below uses, so the polyfill can never disagree with the CSS about which
+   * layout the page is in.
+   *
+   * The grid's own width can't answer this any more, now that the side margins
+   * shrink on a phone along with the gutter: a phone grid (560 - 2*7 = 546px) is
+   * *wider* than the narrowest desktop one (561 - 2*14 = 533px), so there is no
+   * width threshold that separates them.
+   */
+  let phone = $state(false);
+
+  $effect(() => {
+    const mq = window.matchMedia(`(max-width: ${PHONE_MAX}px)`);
+    const sync = () => (phone = mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  });
+
   // Shortest-column placement => the first row fills left→right, then packs vertically.
   const layout = $derived.by(() => {
     const empty = {
@@ -178,8 +196,7 @@
       height: 0,
     };
     if (!polyfill || !gridWidth) return empty;
-    const phone = gridWidth <= PHONE_GRID;
-    const gap = phone ? PHONE_TILE_GAP : GAP;
+    const gap = phone ? PHONE_GAP : GAP;
     const columns = phone
       ? PHONE_COLUMNS
       : Math.max(1, Math.floor((gridWidth + gap) / (TARGET_COLUMN + gap)));
@@ -580,18 +597,18 @@
 	 * only when native support is absent.
 	 */
   .grid {
-    /* Gutter between photos — halved on phones (see the breakpoint below). The grid's
-		   own side margins stay at --gap, which is what PHONE_GRID assumes. */
+    /* One gutter for the whole grid — between the photos and around them — so the
+		   frame the photos sit in stays even. Halved on phones (see the breakpoint). */
     --tile-gap: var(--gap);
 
-    margin: 0 var(--gap) 320px;
+    margin: 0 var(--tile-gap) 320px;
     padding: 0 0 60px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     grid-template-rows: masonry;
     gap: var(--tile-gap);
   }
-  /* Keep the breakpoint in sync with PHONE_GRID, and the gutter with PHONE_TILE_GAP. */
+  /* Keep in sync with PHONE_MAX, PHONE_COLUMNS and PHONE_GAP. */
   @media (max-width: 560px) {
     .grid {
       --tile-gap: calc(var(--gap) / 2);
