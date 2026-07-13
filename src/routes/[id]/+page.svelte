@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { replaceState } from "$app/navigation";
   import "photoswipe/style.css";
   import "./lightbox.css";
   import downloadIcon from "./download.svg";
@@ -212,6 +213,40 @@
   // background on actual swipes/arrows within the lightbox.
   let skipNextLightboxChange = false;
 
+  /*
+   * Deep links to a photo. The open photo is mirrored into the URL fragment, so the
+   * address bar always points at what the visitor is actually looking at — copy it,
+   * reload it, or share it, and the gallery opens on that photo. Cleared again on
+   * close, leaving the plain gallery URL behind.
+   *
+   * The fragment carries the *filename*, not the grid index: the folder is the
+   * photographer's to reorder, and a shared link should survive a photo being added
+   * ahead of the one it names. Filenames are unique within a Dropbox folder, so a
+   * name identifies exactly one photo. Dropbox's own image id would be stable too,
+   * but it's an opaque `id:AbC…` blob — ugly in a URL people are meant to send each
+   * other, and it leaks storage internals.
+   *
+   * `replaceState`, not `pushState`: opening a photo is not a navigation the visitor
+   * asked for, and a swipe through 40 photos should not bury the page they arrived on
+   * under 40 back-button presses.
+   */
+  const hashFor = (img: Img) => `#${encodeURIComponent(img.name)}`;
+
+  /** The grid index the current URL fragment names, or -1 for none/unknown. */
+  function indexFromHash(): number {
+    let name: string;
+    try {
+      name = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      return -1; // malformed percent-encoding — someone hand-edited the URL
+    }
+    if (!name) return -1;
+    return data.images.findIndex((img) => img.name === name);
+  }
+
+  /** True once a fragment present at load has been honoured, so we open it only once. */
+  let openedFromHash = false;
+
   $effect(() => {
     // Read synchronously, before the first await: reads inside the async body below
     // aren't tracked, so this is what makes the effect re-run — rebuilding the lightbox
@@ -306,6 +341,9 @@
       // Fires on open and on every swipe/arrow change; `currIndex` matches the
       // tile index since `items` and `tiles` share an order.
       lb.on("change", () => {
+        const img = data.images[lb.pswp.currIndex];
+        if (img) replaceState(hashFor(img), {});
+
         if (skipNextLightboxChange) {
           skipNextLightboxChange = false;
           return;
@@ -315,7 +353,23 @@
           behavior: "instant" as ScrollBehavior,
         });
       });
+      // Back to the plain gallery URL. `close` fires only when a visitor closes the
+      // lightbox — tearing it down on unmount fires `destroy` instead — so navigating
+      // away with a photo open never rewrites the URL we're leaving for.
+      lb.on("close", () => {
+        replaceState(location.pathname + location.search, {});
+      });
       lb.init();
+
+      // A URL naming a photo opens straight into it. `change` then scrolls the grid to
+      // that tile behind the lightbox, so closing leaves the visitor on the photo they
+      // were sent rather than back at the top of the gallery. An unknown name (a photo
+      // since renamed or removed) just leaves the gallery as it is.
+      if (!openedFromHash) {
+        openedFromHash = true;
+        const i = indexFromHash();
+        if (i >= 0) lb.loadAndOpen(i);
+      }
       lightbox = lb;
     })();
     return () => lb?.destroy();
