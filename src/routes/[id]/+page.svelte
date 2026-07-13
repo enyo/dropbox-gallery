@@ -54,9 +54,13 @@
   const TARGET_COLUMN = 300; // px, matches the native-masonry minmax below
   const GAP = 14; // keep in sync with --gap
   // Phone widths fit a 300px column only once, so they're pinned to two columns
-  // instead. Grid width at the 560px breakpoint below, less its side margins.
+  // instead. Grid width at the 560px breakpoint below, less its side margins —
+  // which stay at GAP on every width, so this threshold stays a fixed number.
   const PHONE_GRID = 560 - 2 * GAP;
   const PHONE_COLUMNS = 2;
+  // Two columns on a phone leave each photo small, and a full gutter between them
+  // eats width the photos want. Keep in sync with --tile-gap in the media query.
+  const PHONE_TILE_GAP = GAP / 2;
 
   /**
    * Aspect ratios recovered from the thumbnails, for photos the server could not
@@ -173,21 +177,22 @@
       height: 0,
     };
     if (!polyfill || !gridWidth) return empty;
-    const columns =
-      gridWidth <= PHONE_GRID
-        ? PHONE_COLUMNS
-        : Math.max(1, Math.floor((gridWidth + GAP) / (TARGET_COLUMN + GAP)));
-    const colWidth = (gridWidth - (columns - 1) * GAP) / columns;
+    const phone = gridWidth <= PHONE_GRID;
+    const gap = phone ? PHONE_TILE_GAP : GAP;
+    const columns = phone
+      ? PHONE_COLUMNS
+      : Math.max(1, Math.floor((gridWidth + gap) / (TARGET_COLUMN + gap)));
+    const colWidth = (gridWidth - (columns - 1) * gap) / columns;
     const colHeights = new Array(columns).fill(0);
     const positions = tiles.map(({ ar }) => {
       let c = 0;
       for (let j = 1; j < columns; j++)
         if (colHeights[j] < colHeights[c]) c = j;
-      const pos = { x: c * (colWidth + GAP), y: colHeights[c], w: colWidth };
-      colHeights[c] += colWidth / ar + GAP;
+      const pos = { x: c * (colWidth + gap), y: colHeights[c], w: colWidth };
+      colHeights[c] += colWidth / ar + gap;
       return pos;
     });
-    return { positions, height: Math.max(...colHeights, GAP) - GAP };
+    return { positions, height: Math.max(...colHeights, gap) - gap };
   });
 
   function tileStyle(i: number, ar: number): string {
@@ -521,16 +526,22 @@
 	 * only when native support is absent.
 	 */
   .grid {
+    /* Gutter between photos — halved on phones (see the breakpoint below). The grid's
+		   own side margins stay at --gap, which is what PHONE_GRID assumes. */
+    --tile-gap: var(--gap);
+
     margin: 0 var(--gap) 320px;
     padding: 0 0 60px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     grid-template-rows: masonry;
-    gap: var(--gap);
+    gap: var(--tile-gap);
   }
-  /* Keep the breakpoint in sync with PHONE_GRID. */
+  /* Keep the breakpoint in sync with PHONE_GRID, and the gutter with PHONE_TILE_GAP. */
   @media (max-width: 560px) {
     .grid {
+      --tile-gap: calc(var(--gap) / 2);
+
       grid-template-columns: repeat(2, 1fr);
     }
   }
@@ -554,7 +565,7 @@
   .tile {
     position: relative;
     break-inside: avoid;
-    margin: 0 0 var(--gap);
+    margin: 0 0 var(--tile-gap);
     width: 100%;
     background: var(--color-surface);
     overflow: hidden;
