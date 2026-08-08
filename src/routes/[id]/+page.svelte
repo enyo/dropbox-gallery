@@ -6,6 +6,7 @@
   import "./lightbox.css";
   import downloadIcon from "./download.svg";
   import type { PageProps } from "./$types";
+  import Footer from "./Footer.svelte";
 
   let { data }: PageProps = $props();
 
@@ -490,13 +491,7 @@
   </div>
 {/if}
 
-<footer>
-  <span>Hannah Mayr &copy; {new Date().getFullYear()}</span>
-  ·
-  <a href="https://hannahmayr.com/agb">AGB</a>
-  <a href="https://hannahmayr.com/impressum">Impressum</a>
-  <a href="https://hannahmayr.com/datenschutz">Datenschutz</a>
-</footer>
+<Footer />
 
 <style>
   /* Full-screen hero: the cover image fills the viewport with the title laid
@@ -690,22 +685,6 @@
       opacity: 1;
       transform: translateY(0);
       pointer-events: auto;
-    }
-  }
-
-  footer {
-    margin: 48px var(--gap);
-    text-align: center;
-
-    &,
-    > * {
-      font-size: 0.875rem;
-      color: var(--color-text-dim);
-    }
-    a,
-    span {
-      text-decoration: none;
-      margin: 0 6px;
     }
   }
 </style>
