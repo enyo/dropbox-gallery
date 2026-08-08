@@ -1,6 +1,6 @@
 import { building } from "$app/env";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { defineEnvVars } from "@sveltejs/kit/hooks";
+import { defineEnvVars } from "@sveltejs/kit/env";
 import z from "zod";
 
 export const runtimeOnly = <T extends StandardSchemaV1>(schema: T): T =>
