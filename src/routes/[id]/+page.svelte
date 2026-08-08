@@ -584,7 +584,7 @@
 		   frame the photos sit in stays even. Halved on phones (see the breakpoint). */
     --tile-gap: var(--gap);
 
-    margin: 0 var(--tile-gap) 320px;
+    margin: 0 var(--tile-gap) 160px;
     padding: 0 0 60px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

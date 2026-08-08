@@ -1,5 +1,5 @@
 <footer>
-  <span>Hannah Mayr &copy; {new Date().getFullYear()}</span>
+  <span>&copy; Hannah Mayr</span>
 
   <p>
     Bitte vergessen Sie nicht bei Veröffentlichung der Fotos mich als Fotografin
@@ -14,6 +14,10 @@
     <a href="mailto:mail@hannahmayr.com">mail@hannahmayr.com</a>
   </p>
 
+  <p class="website">
+    <a href="https://hannahmayr.com">www.hannahmayr.com</a>
+  </p>
+
   <ul class="links">
     <li><a href="https://hannahmayr.com/impressum">Impressum</a></li>
     <li><a href="https://hannahmayr.com/datenschutz">Datenschutz</a></li>
@@ -25,8 +29,7 @@
     margin: 48px auto;
     text-align: center;
     max-width: min(calc(100vw - var(--gap) * 2), 80ch);
-    color: var(--color-text-dim);
-    font-size: 0.875rem;
+    font-size: 1rem;
 
     a {
       color: inherit;
@@ -35,11 +38,24 @@
       }
     }
   }
+  .website {
+    margin-block: 48px;
+    a {
+      font-weight: 600;
+      text-decoration: none;
+    }
+  }
   .links {
+    font-size: 0.875rem;
     display: flex;
     justify-content: center;
     gap: 12px;
     margin-top: 12px;
     list-style: none;
+    padding: 0;
+    color: var(--color-text-dim);
+    a {
+      text-decoration: none;
+    }
   }
 </style>
