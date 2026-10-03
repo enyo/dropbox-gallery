@@ -10,7 +10,8 @@
  *   pbkdf2$sha256$<iterations>$<saltB64url>$<hashB64url>
  */
 
-// OWASP-recommended floor for PBKDF2-HMAC-SHA256; tune upward over time.
+// OWASP-recommended floor for PBKDF2-HMAC-SHA256. Cloudflare Workers rejects
+// PBKDF2 above 100k iterations, so this cannot be raised while we run there.
 const ITERATIONS = 100_000;
 const KEY_BYTES = 32;
 const SALT_BYTES = 16;
@@ -57,6 +58,13 @@ function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
   return diff === 0;
 }
 
+/**
+ * A valid-shaped hash with the current parameters, to verify against when the
+ * username is unknown so login timing does not reveal whether an account
+ * exists. It matches no real password.
+ */
+export const DUMMY_HASH = `pbkdf2$sha256$${ITERATIONS}$NK0oYfeA8fUZQzjxmjDcsg$0c5ukxHnZNFc3TnN_ppj7JTQ43nvzxkVcfGeQS1H-8w`;
+
 /** Hash a plaintext password into a self-describing, storable string. */
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
@@ -81,6 +89,12 @@ export async function verifyPassword(password: string, stored: string): Promise<
   } catch {
     return false;
   }
-  const actual = await deriveKey(password, salt, iterations, expected.length);
+  let actual: Uint8Array<ArrayBuffer>;
+  try {
+    actual = await deriveKey(password, salt, iterations, expected.length);
+  } catch {
+    // e.g. an iteration count the runtime refuses (Workers caps PBKDF2 at 100k).
+    return false;
+  }
   return constantTimeEqual(actual, expected);
 }

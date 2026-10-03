@@ -6,7 +6,7 @@ import { createSessionValue, SESSION_COOKIE, SESSION_MAX_AGE } from "$lib/server
 import { getGalleryService } from "$lib/server/gallery/service";
 import { getGalleryStore, galleryPath } from "$lib/server/gallery/store";
 import { getUserStore } from "$lib/server/auth/users";
-import { verifyPassword } from "$lib/server/password";
+import { DUMMY_HASH, verifyPassword } from "$lib/server/password";
 
 export const load: PageServerLoad = async ({ locals, url, platform }) => {
   if (!locals.isAdmin) return { isAdmin: false, username: null, galleries: [] };
@@ -25,11 +25,6 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 };
 
 const EXPIRY_DAYS: Record<string, number | null> = { "30": 30, "90": 90, "365": 365, never: null };
-
-// A valid-shaped hash to verify against when the username is unknown, so login
-// timing does not reveal whether an account exists. It matches no real password.
-const DUMMY_HASH =
-  "pbkdf2$sha256$210000$NK0oYfeA8fUZQzjxmjDcsg$0c5ukxHnZNFc3TnN_ppj7JTQ43nvzxkVcfGeQS1H-8w";
 
 export const actions: Actions = {
   login: async ({ request, cookies, platform }) => {

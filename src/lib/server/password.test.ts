@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hashPassword, verifyPassword } from "./password";
+import { DUMMY_HASH, hashPassword, verifyPassword } from "./password";
 
 describe("password hashing", () => {
   it("verifies a correct password", async () => {
@@ -37,5 +37,13 @@ describe("password hashing", () => {
     const parts = (await hashPassword("tune-me")).split("$");
     parts[2] = "1000";
     expect(await verifyPassword("tune-me", parts.join("$"))).toBe(false);
+  });
+
+  it("dummy hash uses the same parameters as real hashes and matches nothing", async () => {
+    // Same iteration count keeps unknown-user logins timing-equivalent, and stays
+    // within the Workers PBKDF2 limit (exceeding it threw and 500'd the login).
+    const real = (await hashPassword("x")).split("$");
+    expect(DUMMY_HASH.split("$").slice(0, 3)).toEqual(real.slice(0, 3));
+    expect(await verifyPassword("", DUMMY_HASH)).toBe(false);
   });
 });
